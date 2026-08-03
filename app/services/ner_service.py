@@ -148,7 +148,10 @@ class NERService:
             elif ent.label_ == "HOSPITAL" and entities["HOSPITAL"] is None:
                 entities["HOSPITAL"] = ent.text.strip()
             elif ent.label_ == "DEPARTMENT" and entities["DEPARTMENT"] is None:
-                entities["DEPARTMENT"] = ent.text.strip()
+                # Normalize through specialization service
+                from app.services.specialization_service import specialization_service
+                raw = ent.text.strip()
+                entities["DEPARTMENT"] = specialization_service.normalize(raw) or raw
 
         # Aggressive fallbacks
         if entities["PERSON_NAME"] is None:
@@ -244,11 +247,34 @@ class NERService:
         return None
 
     def _extract_department_fallback(self, text: str) -> Optional[str]:
-        """Fallback department extraction."""
+        """
+        Fallback department extraction using specialization_service.
+        Covers synonym map + fuzzy match against canonical list.
+        """
+        from app.services.specialization_service import specialization_service
+
         text_lower = text.lower()
 
+        # First try old-style keyword match (fast)
         for dept in KNOWN_DEPARTMENTS:
             if dept in text_lower:
-                return dept.title()
+                # Normalize through specialization service
+                normalized = specialization_service.normalize(dept)
+                return normalized if normalized else dept.title()
+
+        # Try the full sentence through specialization service
+        # It handles synonyms like "heart specialist" → "Cardiology"
+        normalized = specialization_service.normalize(text_lower)
+        if normalized:
+            return normalized
+
+        # Try word by word and phrase combinations
+        words = text_lower.split()
+        for i in range(len(words)):
+            for j in range(i + 1, min(i + 5, len(words) + 1)):
+                phrase = " ".join(words[i:j])
+                result = specialization_service.normalize(phrase)
+                if result:
+                    return result
 
         return None

@@ -7,7 +7,7 @@ Audio → Faster-Whisper → Regex → spaCy NER → Gemini Flash → Validated 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import voice
+from app.routers import voice, specializations
 
 app = FastAPI(
     title="DRX Doctor Registration API",
@@ -26,6 +26,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(voice.router, prefix="/api/voice", tags=["Voice Registration"])
+app.include_router(specializations.router, prefix="/api/specializations", tags=["Specializations"])
 
 
 @app.get("/", tags=["Health"])
