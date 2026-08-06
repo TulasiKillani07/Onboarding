@@ -1,0 +1,388 @@
+# hospitals.txt — Master vocabulary of hospital and clinic names
+# Count: 400 entries
+# Format: One name per line
+# Region: India-focused (national chains, state-level, city-level, Tier 2/3 cities)
+# Rule: These are proper names only. "Hospital" or "Clinic" alone is never included.
+
+# --- National Chains ---
+Apollo
+Apollo Hospital
+Apollo Hospitals
+Apollo Speciality Hospital
+Apollo Clinic
+Fortis
+Fortis Hospital
+Fortis Hospitals
+Fortis Healthcare
+Max Hospital
+Max Hospitals
+Max Super Speciality Hospital
+Manipal Hospital
+Manipal Hospitals
+Manipal Health Enterprises
+Columbia Asia Hospital
+Columbia Asia Hospitals
+Narayana Health
+Narayana Hrudayalaya
+Narayana Hospital
+Narayana Multispeciality Hospital
+Medanta
+Medanta Hospital
+Medanta The Medicity
+Aster Hospital
+Aster Hospitals
+Aster Medcity
+Aster DM Healthcare
+NH Hospital
+NH Narayana Hospital
+Rainbow Hospital
+Rainbow Hospitals
+Rainbow Children's Hospital
+Yashoda Hospital
+Yashoda Hospitals
+Yashoda Super Speciality Hospital
+KIMS Hospital
+KIMS Hospitals
+Krishna Institute of Medical Sciences
+Care Hospital
+Care Hospitals
+Care Super Speciality Hospital
+Global Hospital
+Global Hospitals
+Gleneagles Global Hospital
+HCG Hospital
+HCG Cancer Centre
+Kokilaben Hospital
+Kokilaben Dhirubhai Ambani Hospital
+Lilavati Hospital
+Lilavati Hospital and Research Centre
+Hinduja Hospital
+PD Hinduja Hospital
+Bombay Hospital
+Breach Candy Hospital
+Jaslok Hospital
+Wockhardt Hospital
+Wockhardt Hospitals
+Sir HN Reliance Foundation Hospital
+Nanavati Hospital
+Nanavati Super Speciality Hospital
+Ruby Hall Clinic
+Deenanath Mangeshkar Hospital
+Sahyadri Hospital
+Sahyadri Hospitals
+Jupiter Hospital
+KEM Hospital
+Seth GS Medical College and KEM Hospital
+Nair Hospital
+BYL Nair Charitable Hospital
+Lokmanya Tilak Municipal Hospital
+AIIMS
+AIIMS Delhi
+All India Institute of Medical Sciences
+PGIMER
+PGIMER Chandigarh
+Post Graduate Institute of Medical Education and Research
+NIMHANS
+NIMHANS Bangalore
+National Institute of Mental Health and Neurosciences
+JIPMER
+JIPMER Puducherry
+Jawaharlal Institute of Post Graduate Medical Education and Research
+Christian Medical College
+CMC Vellore
+CMC Ludhiana
+Amrita Hospital
+Amrita Institute of Medical Sciences
+SIMS Hospital
+Sri Ramachandra Medical Centre
+Vijaya Hospital
+Vijaya Health Centre
+Kauvery Hospital
+Kauvery Medical Centre
+Sri Ramakrishna Hospital
+Ganga Hospital
+G. Kuppuswamy Naidu Memorial Hospital
+PSG Hospital
+PSG Institute of Medical Sciences and Research
+KG Hospital
+KGiSL Medical College and Hospital
+Meenakshi Mission Hospital
+Mahatma Gandhi Memorial Hospital
+Rajiv Gandhi Government General Hospital
+Kilpauk Medical College Hospital
+Stanley Medical College Hospital
+Madurai Medical College Hospital
+Government General Hospital Chennai
+Government General Hospital Madurai
+NIMS Hospital
+NIMS Hyderabad
+Nizams Institute of Medical Sciences
+Osmania General Hospital
+Gandhi Hospital
+Gandhi Medical College Hospital
+Hyderabad
+Basavatarakam Indo American Cancer Hospital
+Cancer Hospital Hyderabad
+L. V. Prasad Eye Institute
+Aravind Eye Hospital
+Aravind Eye Care System
+Sankara Nethralaya
+Shankara Eye Foundation
+Vasan Eye Care
+Lotus Eye Hospital
+Lotus Eye Care Hospital
+Drishti Eye Centre
+Sankara Eye Hospital
+Shroff Eye Centre
+Centre for Sight
+Spectra Eye Hospital
+Sharp Sight Eye Hospital
+Sharp Sight Centre
+ASG Eye Hospital
+Dr Agarwal's Eye Hospital
+Dr Shroff's Charity Eye Hospital
+Pushpagiri Eye Institute
+Little Flower Hospital
+Amala Hospital
+Jubilee Mission Hospital
+MOSC Hospital
+Medical Trust Hospital
+Lakeshore Hospital
+Aster MIMS Hospital
+PVS Memorial Hospital
+Ernakulam Medical Centre
+Baby Memorial Hospital
+NIMS Medicity
+Malabar Institute of Medical Sciences
+MIMS Hospital
+Pariyaram Medical College Hospital
+Government Medical College Kozhikode
+Government Medical College Thiruvananthapuram
+Sree Chitra Tirunal Institute
+Achutha Menon Centre
+Trivandrum Medical College
+SAT Hospital
+Government TD Medical College Hospital
+Calicut Medical College Hospital
+KMCT Medical College Hospital
+Westfort Hi-Tech Hospital
+VPS Lakeshore Hospital
+Sunrise Hospital
+Sunrise International Medical Centre
+Renai Medicity
+KIMSHEALTH
+Believers Church Medical College Hospital
+Wellcare Hospital
+Caritas Hospital
+Holy Family Hospital
+Holy Cross Hospital
+Holy Spirit Hospital
+Don Bosco Hospital
+St John's Hospital
+St John's Medical College Hospital
+St Martha's Hospital
+St Philomena's Hospital
+Vani Vilas Hospital
+Bowring and Lady Curzon Hospital
+Indira Gandhi Institute of Child Health
+Kidwai Memorial Institute of Oncology
+Victoria Hospital
+Bangalore Medical College and Research Institute
+MS Ramaiah Memorial Hospital
+MS Ramaiah Medical College Hospital
+Mallya Hospital
+Sparsh Hospital
+Sparsh Multispeciality Hospital
+Sagar Hospital
+Sagar Hospitals
+Fortis La Femme Hospital
+HCG Milann Fertility Centre
+BGS Gleneagles Global Hospital
+Sakra World Hospital
+Sakra Premium Clinic
+Motherhood Hospital
+Motherhood Hospitals
+Cloudnine Hospital
+Cloudnine Hospitals
+Rainbow Children's Hospital Bangalore
+Aster CMI Hospital
+Narayana Multispeciality Hospital Bangalore
+Vikram Hospital
+Vikram Hospitals
+HOSMAT Hospital
+Bowring Hospital
+Rajiv Gandhi Institute of Chest Diseases
+Government Ayurvedic Medical College Hospital
+Mysore Medical College and Research Institute
+JSS Hospital
+Cheluvamba Hospital
+Sangameshwar Hospital
+Manipal Hospital Mangalore
+KMC Hospital
+Kasturba Medical College Hospital
+Father Muller Medical College Hospital
+Kanachur Institute of Medical Sciences
+AJ Institute of Medical Sciences
+Unity Health Complex
+Wenlock Hospital
+Government Wenlock Hospital
+District Hospital Mangalore
+Shrinidhi Hospital
+K.S. Hegde Medical Academy
+Nitte Deemed University
+RGUHS Hospital
+Mysore Hospitals
+Columbia Asia Hospital Mysore
+Apollo BGS Hospital
+Jayadeva Institute of Cardiovascular Sciences
+Victoria Hospital Bangalore
+Paediatric Surgery Hospital
+National Institute of Mental Health
+Dharwad Institute of Mental Health
+BLDE Hospital
+Shri BM Patil Medical College Hospital
+Al Shifa Hospital
+Iqraa Hospital
+Government Medical College Kottayam
+Rajagiri Hospital
+Pushpagiri Medical College Hospital
+DR LH Hiranandani Hospital
+SRV Hospital
+Criticare Hospital
+Hiranandani Hospital
+PD Hinduja National Hospital
+Tata Memorial Hospital
+Tata Memorial Centre
+Bombay Hospital and Medical Research Centre
+Breach Candy Hospital Trust
+Cumballa Hill Hospital
+Masina Hospital
+Bai Jerbai Wadia Hospital
+BJ Wadia Hospital
+Seven Hills Hospital
+Raheja Hospital
+ZenMultispeciality Hospital
+Global Hospitals Mumbai
+Nanavati Hospital Mumbai
+Kokilaben Dhirubhai Ambani Hospital Mumbai
+Siddhivinayak Hospital
+Siddhivinayak Ganapati Temple Hospital
+Prince Aly Khan Hospital
+Saifee Hospital
+Holy Family Hospital Mumbai
+Surya Mother and Child Super Speciality Hospital
+Surya Hospitals
+Oyster and Pearl Hospital
+SRCC Children's Hospital
+Bombay Maternity and Surgical Home
+SevenHills Healthcare
+Hinduja Klinikum
+MGM Hospital
+MGM Medical College Hospital
+Mahatma Gandhi Mission Hospital
+DY Patil Hospital
+DY Patil Medical College Hospital
+Padmashree Dr DY Patil Medical College
+Symbiosis Hospital
+Bharati Hospital
+Bharati Vidyapeeth Medical College Hospital
+Armed Forces Medical College Hospital
+Ruby Hall Clinic Pune
+Inamdar Hospital
+Inamdar Multispeciality Hospital
+Noble Hospital
+Noble Multispeciality Hospital
+Aditya Birla Memorial Hospital
+Jehangir Hospital
+Jehangir Clinical Development Centre
+Kelkar Hospital
+Kamala Nehru Hospital
+Sassoon Hospital
+Sassoon General Hospital
+B.J. Government Medical College
+KEM Hospital Pune
+Sancheti Hospital
+Sancheti Institute for Orthopaedics
+Lokmanya Hospital
+Lokmanya Medical Research Centre
+Life Point Hospital
+Oyster and Pearl Hospitals
+Vighnaharta Hospital
+Lifeline Hospital
+Om Hospital
+Poona Hospital
+Poona Hospital and Research Centre
+Deccan Hospital
+Surya Hospital
+PDEA Hospital
+NM Wadia Hospital
+Deenanath Mangeshkar Hospital Pune
+Aditya Hospital
+Aditya Birla Health Insurance Company Hospital
+Shashwat Hospital
+Shree Hospital
+Kolhapur Cancer Centre
+Government District Hospital
+Government Medical College Miraj
+Government Medical College Latur
+Aurangabad Government Medical College
+Shri Shankaracharya Medical College Hospital
+AIIMS Raipur
+AIIMS Bhopal
+AIIMS Bhubaneswar
+AIIMS Jodhpur
+AIIMS Patna
+AIIMS Rishikesh
+AIIMS Nagpur
+AIIMS Mangalagiri
+AIIMS Bibinagar
+AIIMS Madurai
+AIIMS Kalyani
+AIIMS Rajkot
+AIIMS Gorakhpur
+SGPGI
+Sanjay Gandhi Postgraduate Institute of Medical Sciences
+King George's Medical University
+KGMU
+Chhatrapati Shahuji Maharaj Medical University
+Banaras Hindu University Hospital
+BHU Hospital
+Sir Sunderlal Hospital
+Safdarjung Hospital
+RML Hospital
+Ram Manohar Lohia Hospital
+LNJP Hospital
+Lok Nayak Jai Prakash Hospital
+GTB Hospital
+Guru Teg Bahadur Hospital
+PGIMS Rohtak
+Pt BD Sharma Post Graduate Institute of Medical Sciences
+MAMC
+Maulana Azad Medical College
+Lady Hardinge Medical College Hospital
+Kalawati Saran Children's Hospital
+National Heart Institute
+Escorts Heart Institute
+Escorts Hospital
+Indraprastha Apollo Hospital
+Apollo Hospital Delhi
+BLK Super Speciality Hospital
+Rajiv Gandhi Cancer Institute
+Dharamshila Narayana Hospital
+Max Smart Super Speciality Hospital
+Max Balaji Hospital
+Pushpanjali Hospital
+Columbia Asia Hospital Delhi
+Fortis Hospital Shalimar Bagh
+Fortis Hospital Noida
+Fortis Flt Lt Rajan Dhall Hospital
+Rockland Hospital
+Moolchand Hospital
+Sir Ganga Ram Hospital
+Batra Hospital
+Holy Family Hospital Delhi
+Primus Super Speciality Hospital
+Venkateshwar Hospital
+Sant Parmanand Hospital
+Shanti Mukand Hospital
+Indian Spinal Injuries Centre

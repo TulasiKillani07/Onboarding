@@ -1,208 +1,206 @@
-"""
-Voice registration API endpoints.
-Handles audio upload, transcription, and entity extraction pipeline.
+﻿"""
+Voice Router — thin orchestrator.
+
+Dependency flow:
+    voice.py
+        ├── SarvamService.transcribe(audio) → transcript (str)
+        └── OnboardingNER.process(transcript) → resolved dict
+
+The two modules (sarvam/ and onboarding_ner/) are fully independent.
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from pydantic import BaseModel
-
-from app.schemas.doctor import TranscriptionResponse, ExtractionResponse, DoctorRegistration
-from app.services.whisper_service import WhisperService
-from app.services.regex_service import RegexService
-from app.services.ner_service import NERService
-from app.services.llm_service import LLMService
+from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from app.schemas.doctor import TranscriptInput, TranscriptionResponse, ExtractionResponse, DoctorRegistration
+from app.sarvam import SarvamService
+from app.onboarding_ner import OnboardingNER
 
 router = APIRouter()
 
+_ALLOWED_AUDIO_TYPES = {
+    "audio/wav", "audio/wave", "audio/x-wav",
+    "audio/mp3", "audio/mpeg",
+    "audio/webm", "audio/ogg",
+    "video/webm",
+}
+_ALLOWED_EXTENSIONS = {".wav", ".mp3", ".webm", ".ogg", ".m4a"}
 
-class TranscriptInput(BaseModel):
-    """Input for extraction endpoint."""
-    transcript: str
 
-
-@router.post("/transcribe", response_model=TranscriptionResponse)
-async def transcribe_audio(file: UploadFile = File(...)):
-    """
-    Transcribe audio file to text using Faster-Whisper.
-
-    Accepts audio files (WAV, MP3, WebM, OGG) and returns the transcript.
-    """
-    # Validate file type
-    allowed_types = [
-        "audio/wav", "audio/wave", "audio/x-wav",
-        "audio/mp3", "audio/mpeg",
-        "audio/webm", "audio/ogg",
-        "video/webm",  # Some browsers report webm as video
-    ]
-
-    # Be lenient with content type checking
-    content_type = file.content_type or ""
-    if content_type and content_type not in allowed_types:
-        # Still allow if extension is valid
-        valid_extensions = [".wav", ".mp3", ".webm", ".ogg", ".m4a"]
-        filename = file.filename or ""
-        if not any(filename.lower().endswith(ext) for ext in valid_extensions):
+def _validate_audio(file: UploadFile):
+    ct = file.content_type or ""
+    if ct and ct not in _ALLOWED_AUDIO_TYPES:
+        fn = file.filename or ""
+        if not any(fn.lower().endswith(ext) for ext in _ALLOWED_EXTENSIONS):
             raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported audio format: {content_type}. Supported: WAV, MP3, WebM, OGG"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported format: {ct}. Accepted: WAV, MP3, WebM, OGG",
             )
 
+
+def _build_response(resolved: dict, transcript: str,
+                    entities: dict, extra_steps: list | None = None) -> ExtractionResponse:
+    doctor_data = DoctorRegistration(
+        name=resolved.get("doctor_name") or "",
+        email=resolved.get("email") or "",
+        phone=resolved.get("phone") or "",
+        hospital=resolved.get("hospital") or "",
+        department=resolved.get("specialization") or "",
+    )
+    filled = sum(1 for k, v in resolved.items() if k != "entities" and v)
+    steps  = (extra_steps or []) + [{"step": "ner_pipeline", "result": {k: v for k, v in resolved.items() if k != "entities"}}]
+    return ExtractionResponse(
+        success=True,
+        data=doctor_data,
+        transcript=transcript,
+        entities=entities,
+        confidence=round(filled / 5.0, 2),
+        pipeline_steps=steps,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/transcribe",
+    response_model=TranscriptionResponse,
+    summary="Transcribe audio to text",
+    description="""
+Upload an audio file and get the transcript back.
+
+**Supported formats:** WAV, MP3, WebM, OGG, M4A
+
+**Use this when:** The frontend records audio and wants the raw transcript before extraction.
+
+**Pipeline:** Audio → Sarvam AI Saaras v3 STT → Transcript
+
+**Note:** This endpoint does NOT extract entities. Use `/process` for the full pipeline.
+""",
+    responses={
+        200: {"description": "Transcription successful"},
+        400: {"description": "Empty file or unsupported audio format"},
+        500: {"description": "Sarvam STT API error"},
+    },
+)
+async def transcribe_audio(
+    file: UploadFile = File(..., description="Audio file (WAV/MP3/WebM/OGG). Max recommended: 30 seconds.")
+):
+    _validate_audio(file)
     try:
-        # Read audio bytes
         audio_bytes = await file.read()
-
-        if len(audio_bytes) == 0:
+        if not audio_bytes:
             raise HTTPException(status_code=400, detail="Empty audio file")
-
-        # Transcribe
-        whisper = WhisperService.get_instance()
-        transcript, duration = await whisper.transcribe(audio_bytes, file.filename or "audio.wav")
-
-        if not transcript.strip():
-            return TranscriptionResponse(
-                success=False,
-                transcript="",
-                duration=duration,
-            )
-
-        return TranscriptionResponse(
-            success=True,
-            transcript=transcript.strip(),
-            language="en",
-            duration=duration,
+        transcript, duration = await SarvamService.get_instance().transcribe(
+            audio_bytes, file.filename or "audio.wav"
         )
-
+        if not transcript.strip():
+            return TranscriptionResponse(success=False, transcript="", duration=duration)
+        return TranscriptionResponse(success=True, transcript=transcript.strip(),
+                                     language="en", duration=duration)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
-@router.post("/extract", response_model=ExtractionResponse)
-async def extract_entities(input_data: TranscriptInput):
-    """
-    Extract doctor registration data from transcript.
+@router.post(
+    "/extract",
+    response_model=ExtractionResponse,
+    summary="Extract doctor data from transcript",
+    description="""
+Extract structured doctor registration data from a plain text transcript.
 
-    Pipeline: Transcript → Regex → spaCy NER → Gemini Flash → Validated JSON
-    """
-    transcript = input_data.transcript
+**Use this when:** You already have the transcript (typed input or pre-transcribed).
 
-    if not transcript.strip():
+**Pipeline:** Transcript → Regex → NER → Validate → Pattern Extract → Normalize → Resolve
+
+**Returns:** Exactly one value per field (or empty string if not found).
+
+**Fields extracted:**
+- `name` — Doctor's full name without title (Dr., Prof. are stripped)
+- `hospital` — Hospital or clinic name
+- `department` — Medical specialization
+- `phone` — Phone number
+- `email` — Email address
+
+**Confidence:** 0.0–1.0 based on how many of the 5 fields were successfully extracted.
+""",
+    responses={
+        200: {"description": "Extraction successful — check `data` for the resolved fields"},
+        400: {"description": "Empty transcript"},
+        500: {"description": "Internal extraction error"},
+    },
+)
+async def extract_entities(
+    input_data: TranscriptInput,
+):
+    if not input_data.transcript.strip():
         raise HTTPException(status_code=400, detail="Empty transcript")
-
-    pipeline_steps = []
-
     try:
-        # Step 1: Regex extraction (phone, email)
-        regex_data = RegexService.extract_all(transcript)
-        pipeline_steps.append({
-            "step": "regex",
-            "result": regex_data,
-        })
-
-        # Step 2: spaCy NER (name, hospital, department)
-        ner_service = NERService.get_instance()
-        ner_data = ner_service.extract_entities(transcript)
-        pipeline_steps.append({
-            "step": "ner",
-            "result": ner_data,
-        })
-
-        # Step 3: LLM validation and normalization
-        llm_service = LLMService.get_instance()
-        validated_data = await llm_service.validate_and_normalize(
-            transcript, regex_data, ner_data
-        )
-        pipeline_steps.append({
-            "step": "llm_validation",
-            "result": validated_data,
-        })
-
-        # Build response
-        doctor_data = DoctorRegistration(
-            name=validated_data.get("name", ""),
-            email=validated_data.get("email", ""),
-            phone=validated_data.get("phone", ""),
-            hospital=validated_data.get("hospital", ""),
-            department=validated_data.get("department", ""),
-        )
-
-        # Calculate confidence (simple heuristic)
-        filled_fields = sum(1 for v in validated_data.values() if v)
-        confidence = filled_fields / 5.0  # 5 total fields
-
-        return ExtractionResponse(
-            success=True,
-            data=doctor_data,
-            transcript=transcript,
-            entities=ner_data,
-            confidence=confidence,
-            pipeline_steps=pipeline_steps,
-        )
-
+        result = OnboardingNER.process(input_data.transcript)
+        return _build_response(result, input_data.transcript, result.get("entities", {}))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
 
 
-@router.post("/process", response_model=ExtractionResponse)
-async def process_audio(file: UploadFile = File(...)):
-    """
-    Full pipeline: Audio → Transcription → Extraction → Validated JSON.
-    Combines transcribe and extract into a single endpoint.
-    """
-    # Step 1: Transcribe
-    allowed_types = [
-        "audio/wav", "audio/wave", "audio/x-wav",
-        "audio/mp3", "audio/mpeg",
-        "audio/webm", "audio/ogg",
-        "video/webm",
-    ]
+@router.post(
+    "/process",
+    response_model=ExtractionResponse,
+    summary="Full pipeline: Audio → Extracted doctor data",
+    description="""
+Upload audio and get fully extracted, normalized doctor registration data in one call.
 
+**Use this for the registration form.** This is the primary endpoint for the frontend.
+
+**Pipeline:**
+1. Audio → Sarvam AI STT → Transcript
+2. Transcript → Regex (phone, email)
+3. Transcript → Custom spaCy NER (name, hospital, specialization)
+4. Validate → reject garbage entities
+5. Pattern Extract → catch informal terms ("I am skin specialist")
+6. Normalize → strip titles, fix hospital typos, map specialization aliases
+7. Resolve → collapse to exactly one value per field
+
+**Returns:**
+```json
+{
+  "data": {
+    "name":       "Tulasi Killani",
+    "hospital":   "Apollo Hospital",
+    "department": "Dermatology",
+    "phone":      "9876543210",
+    "email":      "tulasi@gmail.com"
+  },
+  "confidence": 1.0
+}
+```
+
+**On missing fields:** Returns empty string `""` — never null for form fields.
+
+**Supported audio:** WAV, MP3, WebM, OGG, M4A (max 30 seconds recommended).
+""",
+    responses={
+        200: {"description": "Full pipeline succeeded — use `data` to populate the registration form"},
+        400: {"description": "Empty file, unsupported format, or no speech detected"},
+        500: {"description": "STT or NER pipeline error"},
+    },
+)
+async def process_audio(
+    file: UploadFile = File(..., description="Doctor's voice recording. Speak name, hospital, specialization, phone, and email.")
+):
+    _validate_audio(file)
     try:
         audio_bytes = await file.read()
-        if len(audio_bytes) == 0:
+        if not audio_bytes:
             raise HTTPException(status_code=400, detail="Empty audio file")
-
-        whisper = WhisperService.get_instance()
-        transcript, duration = await whisper.transcribe(audio_bytes, file.filename or "audio.wav")
-
+        transcript, duration = await SarvamService.get_instance().transcribe(
+            audio_bytes, file.filename or "audio.wav"
+        )
         if not transcript.strip():
-            raise HTTPException(status_code=400, detail="Could not transcribe audio. Please try again.")
-
-        # Step 2: Extract
-        regex_data = RegexService.extract_all(transcript)
-        ner_service = NERService.get_instance()
-        ner_data = ner_service.extract_entities(transcript)
-
-        # Step 3: LLM validation
-        llm_service = LLMService.get_instance()
-        validated_data = await llm_service.validate_and_normalize(
-            transcript, regex_data, ner_data
+            raise HTTPException(status_code=400, detail="No speech detected. Please try again.")
+        result = OnboardingNER.process(transcript)
+        return _build_response(
+            result, transcript, result.get("entities", {}),
+            extra_steps=[{"step": "transcription", "result": {"transcript": transcript, "duration": duration}}],
         )
-
-        doctor_data = DoctorRegistration(
-            name=validated_data.get("name", ""),
-            email=validated_data.get("email", ""),
-            phone=validated_data.get("phone", ""),
-            hospital=validated_data.get("hospital", ""),
-            department=validated_data.get("department", ""),
-        )
-
-        filled_fields = sum(1 for v in validated_data.values() if v)
-        confidence = filled_fields / 5.0
-
-        return ExtractionResponse(
-            success=True,
-            data=doctor_data,
-            transcript=transcript,
-            entities=ner_data,
-            confidence=confidence,
-            pipeline_steps=[
-                {"step": "transcription", "result": {"transcript": transcript, "duration": duration}},
-                {"step": "regex", "result": regex_data},
-                {"step": "ner", "result": ner_data},
-                {"step": "llm_validation", "result": validated_data},
-            ],
-        )
-
     except HTTPException:
         raise
     except Exception as e:

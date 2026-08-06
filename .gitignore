@@ -8,7 +8,7 @@ venv/
 env/
 .venv/
 
-# Environment
+# Environment — never commit secrets
 .env
 
 # IDE
@@ -19,6 +19,39 @@ env/
 .DS_Store
 Thumbs.db
 
-# Whisper models cache
+# Model weight files — too large for git
 *.bin
 *.pt
+*.onnx
+*.gguf
+
+# spaCy trained models — not for git, deploy separately
+model-best/
+model-last/
+models/
+*.spacy
+
+# Audio uploads — temp files from transcription endpoint
+*.wav
+*.mp3
+*.webm
+*.ogg
+*.m4a
+*.aac
+*.flac
+
+# Logs
+*.log
+logs/
+
+# Test / temp
+tmp/
+temp/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
