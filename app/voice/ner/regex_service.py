@@ -1,4 +1,4 @@
-"""
+﻿"""
 Regex Service
 Extracts PHONE and EMAIL from text.
 """
@@ -23,3 +23,4 @@ def extract_phones(text: str) -> list[dict]:
 def extract_emails(text: str) -> list[dict]:
     return [{"text": m.group().rstrip(".,;:"), "start": m.start(), "end": m.end()}
             for m in EMAIL_RE.finditer(text)]
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Hospital Service
 Loads hospital master list and provides normalization + validation.
 """
@@ -44,7 +44,7 @@ _HOSP_KEYWORDS = {
 
 def is_valid_hospital(text: str, spec_service=None) -> bool:
     """Return True if text is a valid hospital name."""
-    from app.onboarding_ner.specialization_service import specialization_service as ss
+    from app.voice.ner.specialization_service import specialization_service as ss
     if spec_service is None:
         spec_service = ss
 
@@ -110,3 +110,4 @@ def normalize_hospital(name: str) -> str:
     if close:
         return HOSPITAL_MASTER[HOSPITAL_MASTER_LOWER.index(close[0])]
     return name.strip().title()
+

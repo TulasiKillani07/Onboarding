@@ -1,4 +1,4 @@
-"""
+﻿"""
 Pattern Extractor
 Finds specialization phrases using grammatical context patterns.
 e.g. "I am skin specialist", "working as heart doctor"
@@ -6,7 +6,7 @@ This is NOT NER. Returns only candidates that exist in the spec master.
 """
 
 import re
-from app.onboarding_ner.specialization_service import specialization_service
+from app.voice.ner.specialization_service import specialization_service
 
 SPEC_PATTERNS = [
     re.compile(r"\bi(?:'m| am)\s+(?:a|an|the)?\s*([a-z][a-z\s]{2,35}?)(?:\.|,|\s+at\s|\s+in\s|\s+and\s|\s+my\s|\s+work|\s+from|\s+based|$)", re.IGNORECASE),
@@ -57,3 +57,4 @@ def extract_specialization_patterns(text: str) -> list[dict]:
                 })
 
     return candidates
+

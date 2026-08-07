@@ -1,7 +1,7 @@
-"""
+﻿"""
 NER Service
 Loads the custom-trained spaCy model and runs entity extraction.
-Returns raw spans — no normalization, no validation.
+Returns raw spans â€” no normalization, no validation.
 """
 
 import spacy
@@ -42,3 +42,4 @@ def extract_raw(text: str) -> dict[str, list[dict]]:
                 "end":   ent.end_char,
             })
     return result
+

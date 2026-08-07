@@ -1,9 +1,9 @@
-"""
+﻿"""
 Resolution Service
 Collapses multi-value entity lists to exactly one value (or null).
-  0 values → null
-  1 value  → return it
-  2+ values → score by context → winner or null if tied
+  0 values â†’ null
+  1 value  â†’ return it
+  2+ values â†’ score by context â†’ winner or null if tied
 """
 
 import re
@@ -64,7 +64,7 @@ def _resolve(candidates: list[dict], full_text: str, pos: list, neg: list,
 
 def resolve(entities: dict, full_text: str) -> dict:
     """Collapse all entity lists to single values."""
-    # Hospital: onboarding context — if tied, take last mentioned
+    # Hospital: onboarding context â€” if tied, take last mentioned
     hosp_candidates = entities.get("HOSPITAL", [])
     if len(hosp_candidates) > 1:
         scored = [(_score(c["text"], full_text, _HOSP_POS, _HOSP_NEG), c["text"]) for c in hosp_candidates]
@@ -93,3 +93,4 @@ def resolve(entities: dict, full_text: str) -> dict:
         "phone":          _resolve(entities.get("PHONE", []), full_text, _PHONE_POS, _PHONE_NEG, allow_tie=False),
         "email":          _resolve(entities.get("EMAIL", []), full_text, _EMAIL_POS, _EMAIL_NEG, allow_tie=False),
     }
+

@@ -1,14 +1,14 @@
-"""
+﻿"""
 Validation Service
 Rejects garbage entities before normalization.
 Rules:
-  DOCTOR_NAME  — reject contact/comm words, digits, known invalid tokens
-  HOSPITAL     — delegated to hospital_service.is_valid_hospital()
-  SPECIALIZATION — must exist in specialization master (strict alias match)
+  DOCTOR_NAME  â€” reject contact/comm words, digits, known invalid tokens
+  HOSPITAL     â€” delegated to hospital_service.is_valid_hospital()
+  SPECIALIZATION â€” must exist in specialization master (strict alias match)
 """
 
-from app.onboarding_ner.specialization_service import specialization_service
-from app.onboarding_ner.hospital_service import is_valid_hospital
+from app.voice.ner.specialization_service import specialization_service
+from app.voice.ner.hospital_service import is_valid_hospital
 
 _INVALID_NAME = {
     "contact", "mobile", "phone", "email", "number", "call",
@@ -41,3 +41,4 @@ def is_valid_specialization(text: str) -> bool:
     if t in _INVALID_SPEC:
         return False
     return specialization_service.normalize_strict(text) is not None
+

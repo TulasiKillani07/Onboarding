@@ -1,14 +1,14 @@
-"""
+﻿"""
 Normalization Service
 Applies normalization rules to validated entities.
-  DOCTOR_NAME   — strip title (Dr., Prof., etc.)
-  HOSPITAL      — exact/contains/high-fuzzy match against master
-  SPECIALIZATION — exact/alias match against synonym map
+  DOCTOR_NAME   â€” strip title (Dr., Prof., etc.)
+  HOSPITAL      â€” exact/contains/high-fuzzy match against master
+  SPECIALIZATION â€” exact/alias match against synonym map
 """
 
 import re
-from app.onboarding_ner.specialization_service import specialization_service
-from app.onboarding_ner.hospital_service import normalize_hospital
+from app.voice.ner.specialization_service import specialization_service
+from app.voice.ner.hospital_service import normalize_hospital
 
 TITLE_RE = re.compile(
     r"^(Dr\.?\s+|Prof\.?\s+|Professor\s+|Mr\.?\s+|Mrs\.?\s+|Ms\.?\s+|"
@@ -79,3 +79,4 @@ def normalize_hosp(span: dict) -> dict:
     """Normalize hospital span text against master list."""
     norm = normalize_hospital(span["text"])
     return {"text": norm, "start": span["start"], "end": span["end"]}
+

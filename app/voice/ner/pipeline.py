@@ -1,4 +1,4 @@
-"""
+﻿"""
 OnboardingNER Pipeline
 Single public entry point for the entire NER extraction pipeline.
 
@@ -7,11 +7,11 @@ Usage:
     result = OnboardingNER.process(transcript)
 
 Pipeline stages:
-    1. Regex          → PHONE, EMAIL
-    2. NER + Validate → DOCTOR_NAME, HOSPITAL, SPECIALIZATION
-    3. Pattern Extract → additional specialization phrases
-    4. Normalization  → strip title | hospital lookup | spec alias
-    5. Resolution     → 1 value per field or null
+    1. Regex          â†’ PHONE, EMAIL
+    2. NER + Validate â†’ DOCTOR_NAME, HOSPITAL, SPECIALIZATION
+    3. Pattern Extract â†’ additional specialization phrases
+    4. Normalization  â†’ strip title | hospital lookup | spec alias
+    5. Resolution     â†’ 1 value per field or null
 
 This module knows nothing about Sarvam or audio.
 Input: plain text string
@@ -19,15 +19,15 @@ Output: dict with doctor_name, hospital, specialization, phone, email
 """
 
 from typing import Optional
-from app.onboarding_ner.regex_service       import extract_phones, extract_emails
-from app.onboarding_ner.ner_service         import extract_raw
-from app.onboarding_ner.validation_service  import is_valid_doctor_name, is_valid_hospital, is_valid_specialization
-from app.onboarding_ner.pattern_extractor   import extract_specialization_patterns
-from app.onboarding_ner.normalization_service import normalize_doctor_name, normalize_hosp, normalize_spec
-from app.onboarding_ner.resolution_service  import resolve
-from app.onboarding_ner.specialization_service import specialization_service
+from app.voice.ner.regex_service       import extract_phones, extract_emails
+from app.voice.ner.ner_service         import extract_raw
+from app.voice.ner.validation_service  import is_valid_doctor_name, is_valid_hospital, is_valid_specialization
+from app.voice.ner.pattern_extractor   import extract_specialization_patterns
+from app.voice.ner.normalization_service import normalize_doctor_name, normalize_hosp, normalize_spec
+from app.voice.ner.resolution_service  import resolve
+from app.voice.ner.specialization_service import specialization_service
 
-# Normalization log — tracks every correction for retraining signal
+# Normalization log â€” tracks every correction for retraining signal
 _normalization_log: list[dict] = []
 
 def _log(category: str, original: str, normalized: str):
@@ -41,7 +41,7 @@ def get_normalization_log() -> list[dict]:
 class OnboardingNER:
     """
     Orchestrates the full doctor onboarding NER pipeline.
-    Stateless — all methods are static.
+    Stateless â€” all methods are static.
     """
 
     @staticmethod
@@ -139,3 +139,4 @@ class OnboardingNER:
             "PHONE":          phones,
             "EMAIL":          emails,
         }
+

@@ -1,8 +1,8 @@
-"""
+﻿"""
 Specialization Service
 Canonical specialization list + synonym mapping.
-normalize_strict() — exact/alias only (safe for validation)
-normalize()        — full fuzzy (for display)
+normalize_strict() â€” exact/alias only (safe for validation)
+normalize()        â€” full fuzzy (for display)
 """
 
 import difflib
@@ -148,3 +148,4 @@ class SpecializationService:
 
 
 specialization_service = SpecializationService()
+

@@ -1,11 +1,11 @@
-"""
+﻿"""
 Specializations Router
 Provides the canonical specialization list for the frontend dropdown.
 """
 
 from fastapi import APIRouter
-from app.schemas.doctor import SpecializationListResponse
-from app.onboarding_ner.specialization_service import (
+from app.voice.schemas import SpecializationListResponse
+from app.voice.ner.specialization_service import (
     specialization_service,
     TOP_SPECIALIZATIONS,
     CANONICAL_SPECIALIZATIONS,
@@ -21,7 +21,7 @@ router = APIRouter()
     description="""
 Returns the complete canonical specialization list for the registration form dropdown.
 
-**Use `ordered`** — it puts the 10 most common specializations first, then the rest alphabetically.
+**Use `ordered`** â€” it puts the 10 most common specializations first, then the rest alphabetically.
 This gives the best UX for the dropdown.
 
 **Top 10 (shown first):**
@@ -48,3 +48,5 @@ async def get_specializations():
         ordered=TOP_SPECIALIZATIONS + rest,
         total=len(CANONICAL_SPECIALIZATIONS),
     )
+
+

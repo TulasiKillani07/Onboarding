@@ -10,9 +10,9 @@ The two modules (sarvam/ and onboarding_ner/) are fully independent.
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
-from app.schemas.doctor import TranscriptInput, TranscriptionResponse, ExtractionResponse, DoctorRegistration
-from app.sarvam import SarvamService
-from app.onboarding_ner import OnboardingNER
+from app.voice.schemas import TranscriptInput, TranscriptionResponse, ExtractionResponse, DoctorRegistration
+from app.voice.sarvam import SarvamService
+from app.voice.ner import OnboardingNER
 
 router = APIRouter()
 
@@ -205,3 +205,4 @@ async def process_audio(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
