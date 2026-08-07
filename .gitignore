@@ -25,11 +25,11 @@ Thumbs.db
 *.onnx
 *.gguf
 
-# spaCy trained models — not for git, deploy separately
-model-best/
-model-last/
-models/
-*.spacy
+# # spaCy trained models — not for git, deploy separately
+# model-best/
+# model-last/
+# models/
+# *.spacy
 
 # Audio uploads — temp files from transcription endpoint
 *.wav
