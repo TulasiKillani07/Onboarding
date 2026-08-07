@@ -11,6 +11,7 @@ PHONE_RE = re.compile(
     r"|(\+91[\s\-]?)?\d{3,5}[\s\-]\d{4,8}"
     r"|\b\d{10}\b"
     r"|\+\d{1,3}[\s\-]\d{6,12}"
+    r"|\b\d{5,}\b"                       # accept 5+ digits for partial capture
 )
 EMAIL_RE = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 

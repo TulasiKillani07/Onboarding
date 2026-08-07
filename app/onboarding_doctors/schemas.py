@@ -4,9 +4,10 @@ onboarding/schemas.py
 Pydantic schemas for API validation and response serialization.
 """
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from datetime import datetime
+import re
 from app.onboarding_doctors.models import Source, Status, SyncStatus
 
 
@@ -72,6 +73,16 @@ class RegisterDoctorRequest(BaseModel):
     pipeline_output: Optional[dict] = Field(default=None, description="Full pipeline output (resolved values)")
     auto_fill:       Optional[dict] = Field(default=None, description="What was auto-filled into the form")
     corrections:     Optional[dict] = Field(default=None, description="What the doctor changed from auto-fill")
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v):
+        if v is None:
+            return v
+        digits = re.sub(r"\D", "", v)
+        if len(digits) != 10:
+            raise ValueError("Phone number must be exactly 10 digits")
+        return digits
 
     model_config = {
         "json_schema_extra": {
