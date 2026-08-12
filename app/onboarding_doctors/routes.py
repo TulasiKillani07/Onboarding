@@ -1,12 +1,13 @@
 ﻿"""
 onboarding/routes.py
 --------------------
-Thin router â€” no business logic here.
+Thin router — no business logic here.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from app.onboarding_doctors.schemas import RegisterDoctorRequest, RegisterDoctorResponse
 from app.onboarding_doctors.service import register_doctor
+from app.drx.sync_service import DRXSyncService
 
 router = APIRouter()
 
@@ -19,11 +20,12 @@ router = APIRouter()
     description="""
 Save a doctor into the onboarding database after the registration form is submitted.
 
-Works for both **VOICE** and **MANUAL** registration â€” set `source` accordingly.
+Works for both **VOICE** and **MANUAL** registration — set `source` accordingly.
 
 **Duplicate check:** Returns 409 if the same phone or email already exists.
 
-**Note:** `drx_doctor_gid` will be null until the doctor is synced to DRX (Phase 3).
+**DRX Sync:** Attempts to sync to DRX immediately. If DRX is unavailable,
+doctor is still saved with sync_status=FAILED. Use retry endpoints to re-sync.
 """,
     responses={
         201: {"description": "Doctor registered successfully"},
@@ -34,3 +36,56 @@ Works for both **VOICE** and **MANUAL** registration â€” set `source` accor
 async def register(request: RegisterDoctorRequest) -> RegisterDoctorResponse:
     return await register_doctor(request)
 
+
+@router.post(
+    "/retry-sync/{onboarding_id}",
+    summary="Retry DRX sync for a specific doctor",
+    description="""
+Manually retry syncing a FAILED doctor to DRX.
+
+Use this when DRX was temporarily down and you want to push a specific doctor.
+Idempotent — if doctor already exists in DRX, it returns success.
+""",
+    responses={
+        200: {"description": "Sync retry result"},
+        404: {"description": "Doctor not found"},
+        422: {"description": "Invalid onboarding_id format"},
+    },
+)
+async def retry_sync(onboarding_id: str):
+    # Validate ObjectId format (24 hex chars)
+    if not onboarding_id or len(onboarding_id) != 24:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid onboarding_id format")
+    try:
+        int(onboarding_id, 16)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid onboarding_id format")
+
+    success, error = await DRXSyncService.sync(onboarding_id)
+    if error and "not found" in error.lower():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
+    return {
+        "onboarding_id": onboarding_id,
+        "sync_status": "SYNCED" if success else "FAILED",
+        "sync_error": error,
+    }
+
+
+@router.post(
+    "/retry-sync-all",
+    summary="Retry all failed DRX syncs",
+    description="""
+Retry syncing all FAILED doctors to DRX with exponential backoff.
+
+Backoff schedule: 1 min -> 5 min -> 15 min -> 1 hr.
+Max 5 attempts total (1 initial + 4 retries).
+
+Only retries doctors whose backoff period has elapsed.
+""",
+    responses={
+        200: {"description": "Retry summary"},
+    },
+)
+async def retry_sync_all():
+    result = await DRXSyncService.retry_failed()
+    return result

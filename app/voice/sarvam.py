@@ -3,14 +3,19 @@ Sarvam AI Speech-to-Text service (Saaras v3).
 
 Responsibility: Accept audio bytes, return transcript string.
 This module knows nothing about NER or entity extraction.
+
+Uses shared httpx.AsyncClient for connection pooling and retry.
 """
 
 import os
-import requests
 from typing import Tuple
 from dotenv import load_dotenv
+from app.http_client import HttpClient
+from app.utils.logger import get_dobo_logger
 
 load_dotenv()
+
+logger = get_dobo_logger(__name__)
 
 
 class SarvamService:
@@ -28,7 +33,7 @@ class SarvamService:
     def __init__(self):
         self.api_key = os.getenv("SARVAM_API_KEY", "")
         if not self.api_key:
-            print("WARNING: SARVAM_API_KEY not set. STT will not work.")
+            logger.warning("SARVAM_API_KEY not set. STT will not work.")
 
     async def transcribe(self, audio_bytes: bytes, filename: str = "audio.webm") -> Tuple[str, float]:
         """
@@ -54,21 +59,36 @@ class SarvamService:
         content_type  = mime_map.get(ext, "audio/webm")
         safe_filename = f"recording{ext}"
 
+        logger.info(f"STT request | size={len(audio_bytes)} ext={ext}")
+
+        import httpx
+
         try:
-            response = requests.post(
+            response = await HttpClient.request_with_retry(
+                "POST",
                 self.SARVAM_API_URL,
                 files={"file": (safe_filename, audio_bytes, content_type)},
                 data={"model": "saaras:v3", "mode": "translate", "with_timestamps": "false"},
                 headers={"api-subscription-key": self.api_key},
-                timeout=30,
             )
+
             if response.status_code != 200:
-                raise Exception(f"Sarvam STT failed: {response.status_code} — {response.text}")
+                logger.error(f"Sarvam STT failed | status={response.status_code}")
+                raise Exception(f"Sarvam STT failed: {response.status_code} - {response.text}")
 
             result = response.json()
-            return result.get("transcript", "").strip(), result.get("duration", 0.0)
+            transcript = result.get("transcript", "").strip()
+            duration = result.get("duration", 0.0)
 
-        except requests.exceptions.Timeout:
-            raise Exception("Sarvam API timeout — recording may be too long (max 30s)")
-        except requests.exceptions.ConnectionError:
-            raise Exception("Could not reach Sarvam API — check internet connection")
+            logger.info(f"STT success | duration={duration:.1f}s transcript_len={len(transcript)}")
+            # Debug only: never log raw transcript at INFO (contains PII)
+            logger.debug(f"STT transcript (truncated): {transcript[:50]}...")
+
+            return transcript, duration
+
+        except httpx.TimeoutException:
+            logger.error("Sarvam API timeout")
+            raise Exception("Sarvam API timeout - recording may be too long (max 30s)")
+        except httpx.ConnectError:
+            logger.error("Sarvam API unreachable")
+            raise Exception("Could not reach Sarvam API - check internet connection")

@@ -56,6 +56,8 @@ class DoctorDocument(BaseModel):
     status:         str = Status.ACTIVE.value
     sync_status:    str = SyncStatus.PENDING.value
     sync_error:     Optional[str] = None
+    sync_attempts:  int = 0
+    last_sync_attempt: Optional[datetime] = None
     created_at:     datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at:     datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

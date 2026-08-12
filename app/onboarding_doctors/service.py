@@ -1,7 +1,7 @@
 ﻿"""
 onboarding_doctors/service.py
 -----------------------------
-Registration service — ONLY registration.
+Registration service - ONLY registration.
 
 Flow:
   1. Validate duplicates
@@ -14,36 +14,59 @@ It simply says: drx_sync_service.sync(onboarding_id)
 """
 
 from fastapi import HTTPException, status
+from pymongo.errors import DuplicateKeyError
 from app.database import get_database, COLLECTION_DOCTORS
 from app.onboarding_doctors.models import new_doctor_document, Source
 from app.onboarding_doctors.schemas import RegisterDoctorRequest, RegisterDoctorResponse, LocationResponse
 from app.onboarding_sessions.service import create_session
 from app.drx.sync_service import DRXSyncService
+from app.utils.logger import get_dobo_logger
+
+logger = get_dobo_logger(__name__)
+
+
+def _safe_str(value: str) -> str:
+    """Ensure query value is a plain string, not a dict/operator."""
+    if not isinstance(value, str):
+        raise ValueError(f"Expected string, got {type(value).__name__}")
+    return value
+
+
+def _mask_phone(phone: str | None) -> str:
+    """Mask phone for logging: 98****3210"""
+    if not phone or len(phone) < 6:
+        return "***"
+    return f"{phone[:2]}****{phone[-4:]}"
+
+
+def _mask_email(email: str | None) -> str:
+    """Mask email for logging: r***@gmail.com"""
+    if not email or "@" not in email:
+        return "***"
+    local, domain = email.split("@", 1)
+    return f"{local[0]}***@{domain}"
 
 
 async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorResponse:
     """
     Register a doctor. Both VOICE and MANUAL call this.
-
-    Steps:
-      1. Duplicate check (phone + email)
-      2. Save to onboarding.doctors (sync_status = PENDING)
-      3. Save session to onboarding.onboarding_sessions
-      4. Sync to DRX (delegated — this service doesn't know how)
-      5. Return response with final sync_status
     """
+    logger.info(f"Registration started | source={request.source.value}")
+
     db  = get_database()
     col = db[COLLECTION_DOCTORS]
 
     # 1. Duplicate checks
     if request.phone:
-        if await col.find_one({"phone": request.phone}):
+        if await col.find_one({"phone": _safe_str(request.phone)}):
+            logger.warning(f"Duplicate phone rejected | phone={_mask_phone(request.phone)}")
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"A doctor with phone '{request.phone}' is already registered.",
             )
     if request.email:
-        if await col.find_one({"email": request.email}):
+        if await col.find_one({"email": _safe_str(request.email)}):
+            logger.warning(f"Duplicate email rejected | email={_mask_email(request.email)}")
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"A doctor with email '{request.email}' is already registered.",
@@ -60,8 +83,28 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
         source=request.source,
         location=location_dict,
     )
-    result = await col.insert_one(doc)
+    try:
+        result = await col.insert_one(doc)
+    except DuplicateKeyError as e:
+        logger.warning(f"DuplicateKeyError race condition | detail={str(e)[:100]}")
+        detail = str(e)
+        if "phone" in detail:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A doctor with phone '{request.phone}' is already registered.",
+            )
+        elif "email" in detail:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"A doctor with email '{request.email}' is already registered.",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Duplicate doctor detected.",
+            )
     onboarding_id = str(result.inserted_id)
+    logger.info(f"Doctor saved | onboarding_id={onboarding_id}")
 
     # 3. Save session
     final_submission = {
@@ -85,6 +128,7 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
         auto_fill=request.auto_fill,
         corrections=request.corrections,
     )
+    logger.info(f"Session saved | onboarding_id={onboarding_id}")
 
     # 4. Sync to DRX (delegated)
     success, error = await DRXSyncService.sync(onboarding_id)
@@ -97,6 +141,11 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
     loc = None
     if doc.get("location"):
         loc = LocationResponse(**doc["location"])
+
+    logger.info(
+        f"Registration complete | onboarding_id={onboarding_id} "
+        f"sync_status={doc['sync_status']}"
+    )
 
     return RegisterDoctorResponse(
         onboarding_id=onboarding_id,

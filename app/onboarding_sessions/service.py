@@ -15,6 +15,16 @@ from app.onboarding_sessions.models import generate_session_id, new_session_docu
 from typing import Optional
 
 
+def _safe_str(value: str) -> str:
+    """
+    Ensure a query value is a plain string, not a dict/operator.
+    Prevents MongoDB operator injection (e.g. {"$ne": ""}).
+    """
+    if not isinstance(value, str):
+        raise ValueError(f"Expected string, got {type(value).__name__}")
+    return value
+
+
 async def create_session(
     onboarding_id:        str,
     source:           str,
@@ -53,13 +63,13 @@ async def get_session(session_id: str) -> Optional[dict]:
     """Get a single session by session_id."""
     db  = get_database()
     col = db[COLLECTION_ONBOARDING_SESSIONS]
-    return await col.find_one({"session_id": session_id})
+    return await col.find_one({"session_id": _safe_str(session_id)})
 
 
 async def list_sessions_for_doctor(onboarding_id: str) -> list[dict]:
     """List all sessions for a given doctor, newest first."""
     db  = get_database()
     col = db[COLLECTION_ONBOARDING_SESSIONS]
-    cursor = col.find({"onboarding_id": onboarding_id}).sort("created_at", -1)
+    cursor = col.find({"onboarding_id": _safe_str(onboarding_id)}).sort("created_at", -1)
     return await cursor.to_list(length=100)
 
