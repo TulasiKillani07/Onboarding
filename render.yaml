@@ -1,13 +1,21 @@
 services:
   - type: web
-    name: drx-register-backend
+    name: onboarding-backend
     runtime: python
     buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.12.3
-      - key: GEMINI_API_KEY
-        sync: false
+        value: 3.11.9
       - key: SARVAM_API_KEY
+        sync: false
+      - key: MONGODB_URL
+        sync: false
+      - key: DATABASE_NAME
+        value: onboarding
+      - key: DRX_BASE_URL
+        sync: false
+      - key: DRX_CLIENT_ID
+        sync: false
+      - key: DRX_CLIENT_SECRET
         sync: false
