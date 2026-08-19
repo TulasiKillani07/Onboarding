@@ -47,6 +47,8 @@ class DoctorDocument(BaseModel):
     """Pydantic model for the onboarding.doctors MongoDB document."""
 
     doctor_name:    str
+    username:       str
+    password_hash:  str
     email:          Optional[str] = None
     phone:          Optional[str] = None
     hospital:       Optional[str] = None
@@ -68,6 +70,8 @@ class DoctorDocument(BaseModel):
 
 def new_doctor_document(
     doctor_name:    str,
+    username:       str,
+    password_hash:  str,
     email:          Optional[str],
     phone:          Optional[str],
     hospital:       Optional[str],
@@ -84,6 +88,8 @@ def new_doctor_document(
 
     doc = DoctorDocument(
         doctor_name=doctor_name,
+        username=username,
+        password_hash=password_hash,
         email=email or None,
         phone=phone or None,
         hospital=hospital or None,

@@ -15,6 +15,7 @@ It simply says: drx_sync_service.sync(onboarding_id)
 
 from fastapi import HTTPException, status
 from pymongo.errors import DuplicateKeyError
+from hashlib import sha256
 from app.database import get_database, COLLECTION_DOCTORS
 from app.onboarding_doctors.models import new_doctor_document, Source
 from app.onboarding_doctors.schemas import RegisterDoctorRequest, RegisterDoctorResponse, LocationResponse
@@ -71,11 +72,20 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"A doctor with email '{request.email}' is already registered.",
             )
+    if await col.find_one({"username": _safe_str(request.username)}):
+        logger.warning("Duplicate username rejected")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Username '{request.username}' is already taken.",
+        )
 
     # 2. Save doctor
+    password_hash = sha256(request.password.encode()).hexdigest()
     location_dict = request.location.model_dump() if request.location else None
     doc = new_doctor_document(
         doctor_name=request.doctor_name,
+        username=request.username,
+        password_hash=password_hash,
         email=request.email,
         phone=request.phone,
         hospital=request.hospital,
@@ -83,6 +93,8 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
         source=request.source,
         location=location_dict,
     )
+    # Store plain password temporarily for DRX sync (removed after successful sync)
+    doc["password"] = request.password
     try:
         result = await col.insert_one(doc)
     except DuplicateKeyError as e:
@@ -150,6 +162,7 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
     return RegisterDoctorResponse(
         onboarding_id=onboarding_id,
         doctor_name=doc["doctor_name"],
+        username=doc["username"],
         email=doc.get("email"),
         phone=doc.get("phone"),
         hospital=doc.get("hospital"),

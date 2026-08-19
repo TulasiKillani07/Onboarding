@@ -15,7 +15,9 @@ services:
         value: onboarding
       - key: DRX_BASE_URL
         sync: false
-      - key: DRX_CLIENT_ID
+      - key: PROXZAR_BASE_URL
+        value: https://oauth2.proxzar.ai
+      - key: PROXZAR_USERNAME
         sync: false
-      - key: DRX_CLIENT_SECRET
+      - key: PROXZAR_PASSWORD
         sync: false

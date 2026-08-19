@@ -51,6 +51,8 @@ class DRXSyncService:
             doctor_name=doc["doctor_name"],
             email=doc.get("email"),
             phone=doc.get("phone"),
+            password=doc.get("password"),
+            username=doc.get("username"),
             hospital=doc.get("hospital"),
             specialization=doc.get("specialization"),
             source=doc.get("source", "VOICE"),
@@ -64,13 +66,16 @@ class DRXSyncService:
         if success:
             await col.update_one(
                 {"_id": ObjectId(onboarding_id)},
-                {"$set": {
-                    "sync_status": "SYNCED",
-                    "sync_error": None,
-                    "sync_attempts": current_attempts,
-                    "last_sync_attempt": now,
-                    "updated_at": now,
-                }},
+                {
+                    "$set": {
+                        "sync_status": "SYNCED",
+                        "sync_error": None,
+                        "sync_attempts": current_attempts,
+                        "last_sync_attempt": now,
+                        "updated_at": now,
+                    },
+                    "$unset": {"password": ""},  # Remove plain password after sync
+                },
             )
             logger.info(f"Sync success | onboarding_id={onboarding_id} attempt={current_attempts}")
         else:

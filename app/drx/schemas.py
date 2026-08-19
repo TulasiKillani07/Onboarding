@@ -19,10 +19,12 @@ class DRXLocationPayload(BaseModel):
 
 
 class DRXDoctorCreatePayload(BaseModel):
-    """What we send to DRX POST /drx/api/v1/integration/doctors/register"""
+    """What we send to DRX POST /drxdb/integration/doctors/register"""
     name:           str
+    username:       Optional[str] = None
     email:          str
     phone:          Optional[str] = None
+    password:       Optional[str] = None  # plain text, DRX hashes it
     hospital:       Optional[str] = None
     specialization: Optional[str] = None
     source:         Optional[str] = None  # VOICE | MANUAL

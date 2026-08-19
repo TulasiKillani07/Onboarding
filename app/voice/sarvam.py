@@ -9,11 +9,9 @@ Uses shared httpx.AsyncClient for connection pooling and retry.
 
 import os
 from typing import Tuple
-from dotenv import load_dotenv
 from app.http_client import HttpClient
+from app.config import SARVAM_API_KEY
 from app.utils.logger import get_dobo_logger
-
-load_dotenv()
 
 logger = get_dobo_logger(__name__)
 
@@ -31,7 +29,7 @@ class SarvamService:
         return cls._instance
 
     def __init__(self):
-        self.api_key = os.getenv("SARVAM_API_KEY", "")
+        self.api_key = SARVAM_API_KEY
         if not self.api_key:
             logger.warning("SARVAM_API_KEY not set. STT will not work.")
 

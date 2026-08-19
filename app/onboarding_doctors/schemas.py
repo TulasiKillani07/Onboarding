@@ -59,13 +59,30 @@ class RegisterDoctorRequest(BaseModel):
     The frontend should include them when source=VOICE so the session
     audit trail captures the full pipeline data.
     """
-    doctor_name:    str           = Field(description="Doctor's full name (title stripped)")
-    email:          Optional[str] = Field(default=None, description="Email address")
-    phone:          Optional[str] = Field(default=None, description="Phone number")
-    hospital:       Optional[str] = Field(default=None, description="Hospital or clinic name")
-    specialization: Optional[str] = Field(default=None, description="Medical specialization")
+    doctor_name:    str           = Field(description="Doctor's full name (title stripped)", min_length=8)
+    username:       str           = Field(description="Doctor's chosen username for login")
+    password:       str           = Field(description="Doctor's chosen password (8-64 chars, uppercase+lowercase+number+symbol)", min_length=8, max_length=64)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v):
+        if not re.match(r'^[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]+$', v):
+            raise ValueError("Only English letters, numbers, and standard symbols are allowed")
+        if not re.search(r'[A-Z]', v):
+            raise ValueError("Password must include at least one uppercase letter")
+        if not re.search(r'[a-z]', v):
+            raise ValueError("Password must include at least one lowercase letter")
+        if not re.search(r'[0-9]', v):
+            raise ValueError("Password must include at least one number")
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?`~]', v):
+            raise ValueError("Password must include at least one symbol")
+        return v
+    email:          str           = Field(description="Email address")
+    phone:          str           = Field(description="Phone number (exactly 10 digits)")
+    hospital:       str           = Field(description="Hospital or clinic name")
+    specialization: str           = Field(description="Medical specialization")
     source:         Source        = Field(description="VOICE or MANUAL")
-    location:       Optional[LocationRequest] = Field(default=None)
+    location:       LocationRequest = Field(description="Doctor's location")
 
     # --- Voice session data (optional, sent by frontend for VOICE registrations) ---
     transcript:      Optional[str]  = Field(default=None, description="Raw transcript from STT")
@@ -77,19 +94,28 @@ class RegisterDoctorRequest(BaseModel):
     @field_validator("phone")
     @classmethod
     def validate_phone(cls, v):
-        if v is None:
-            return v
-        digits = re.sub(r"\D", "", v)
+        cleaned = v.strip()
+        # Allow +91 prefix — strip it
+        if cleaned.startswith("+91"):
+            cleaned = cleaned[3:].lstrip("-").strip()
+        elif cleaned.startswith("+"):
+            raise ValueError("Only Indian phone numbers (+91) are accepted")
+        # Now we should have just digits (maybe with spaces/dashes)
+        digits = re.sub(r"[\s\-]", "", cleaned)
+        if not digits.isdigit():
+            raise ValueError("Phone number must contain only digits")
         if len(digits) != 10:
-            raise ValueError("Phone number must be exactly 10 digits")
-        return digits
+            raise ValueError("Phone number must be exactly 10 digits (with optional +91 prefix)")
+        return f"+91{digits}"
 
     model_config = {
         "json_schema_extra": {
             "example": {
                 "doctor_name":    "Rahul Sharma",
+                "username":       "rahul_sharma",
+                "password":       "Rahul@123",
                 "email":          "rahul@gmail.com",
-                "phone":          "9876543210",
+                "phone":          "+919876543210",
                 "hospital":       "Apollo Hospital",
                 "specialization": "Cardiology",
                 "source":         "VOICE",
@@ -121,7 +147,7 @@ class RegisterDoctorRequest(BaseModel):
                 },
                 "corrections": {
                     "email": {"from": "", "to": "rahul@gmail.com"},
-                    "phone": {"from": "", "to": "9876543210"},
+                    "phone": {"from": "", "to": "+919876543210"},
                 },
             }
         }
@@ -140,6 +166,7 @@ class RegisterDoctorResponse(BaseModel):
     """
     onboarding_id:  str                    = Field(description="MongoDB ObjectId of this onboarding record")
     doctor_name:    str
+    username:       str
     email:          Optional[str]          = None
     phone:          Optional[str]          = None
     hospital:       Optional[str]          = None
@@ -155,14 +182,14 @@ class RegisterDoctorResponse(BaseModel):
             "example": {
                 "onboarding_id":  "64f1a2b3c4d5e6f7a8b9c0d1",
                 "doctor_name":    "Rahul Sharma",
+                "username":       "rahul_sharma",
                 "email":          "rahul@gmail.com",
-                "phone":          "9876543210",
+                "phone":          "+919876543210",
                 "hospital":       "Apollo Hospital",
                 "specialization": "Cardiology",
                 "source":         "VOICE",
                 "status":         "ACTIVE",
-                "sync_status":    "PENDING",
-                "drx_doctor_gid": None,
+                "sync_status":    "SYNCED",
                 "location": {
                     "city":    "Hyderabad",
                     "state":   "Telangana",

@@ -6,16 +6,13 @@ Calls DRX integration API to register a doctor.
 Uses shared httpx.AsyncClient for connection pooling and retry.
 """
 
-import os
 import httpx
 from typing import Optional
-from dotenv import load_dotenv
 from app.http_client import HttpClient
-from app.drx.auth_service import DRXAuthService
+from app.drx.auth_service import ProxzarAuthService
 from app.drx.schemas import DRXDoctorCreatePayload, DRXLocationPayload
+from app.config import DRX_BASE_URL
 from app.utils.logger import get_dobo_logger
-
-load_dotenv()
 
 logger = get_dobo_logger(__name__)
 
@@ -23,8 +20,7 @@ logger = get_dobo_logger(__name__)
 class DRXDoctorService:
     """Registers doctors in DRX via integration API."""
 
-    DRX_BASE_URL = os.getenv("DRX_BASE_URL", "http://localhost:8003")
-    REGISTER_ENDPOINT = "/drx/api/v1/integration/doctors/register"
+    REGISTER_ENDPOINT = "/drxdb/integration/doctors/register"
 
     @classmethod
     async def register(
@@ -32,6 +28,8 @@ class DRXDoctorService:
         doctor_name:    str,
         email:          str,
         phone:          Optional[str] = None,
+        password:       Optional[str] = None,
+        username:       Optional[str] = None,
         hospital:       Optional[str] = None,
         specialization: Optional[str] = None,
         source:         str = "VOICE",
@@ -45,13 +43,13 @@ class DRXDoctorService:
         """
         logger.info("DRX doctor registration started")
 
-        # Get Service JWT
-        auth = DRXAuthService.get_instance()
+        # Get Proxzar JWT
+        auth = ProxzarAuthService.get_instance()
         try:
             token = await auth.get_token()
         except Exception as e:
-            logger.error(f"DRX auth failed: {e}", exc_info=True)
-            return False, f"DRX auth failed: {str(e)}"
+            logger.error(f"Proxzar auth failed: {e}", exc_info=True)
+            return False, f"Proxzar auth failed: {str(e)}"
 
         # Build payload
         loc_payload = None
@@ -60,8 +58,10 @@ class DRXDoctorService:
 
         payload = DRXDoctorCreatePayload(
             name=doctor_name,
+            username=username,
             email=email,
             phone=phone,
+            password=password,
             hospital=hospital,
             specialization=specialization,
             source=source,
@@ -69,7 +69,7 @@ class DRXDoctorService:
         )
 
         # Call DRX with retry
-        url = f"{cls.DRX_BASE_URL}{cls.REGISTER_ENDPOINT}"
+        url = f"{DRX_BASE_URL}{cls.REGISTER_ENDPOINT}"
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
@@ -99,8 +99,8 @@ class DRXDoctorService:
 
         if response.status_code == 401:
             auth.clear_token()
-            logger.warning(f"DRX 401: token expired | detail={detail[:100]}")
-            return False, f"DRX auth token expired or invalid: {detail}"
+            logger.warning(f"DRX 401: Proxzar token rejected | detail={detail[:100]}")
+            return False, f"DRX rejected Proxzar token: {detail}"
 
         logger.warning(f"DRX registration failed | status={response.status_code} detail={detail[:100]}")
         return False, f"DRX returned {response.status_code}: {detail}"

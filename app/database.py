@@ -1,4 +1,4 @@
-﻿"""
+"""
 database.py
 -----------
 Single database module for the onboarding service.
@@ -142,6 +142,7 @@ async def _create_doctors_indexes(db):
     indexes = [
         {"key": [("phone",      ASCENDING)],  "unique": True,  "sparse": True,  "name": "idx_phone"},
         {"key": [("email",      ASCENDING)],  "unique": True,  "sparse": True,  "name": "idx_email"},
+        {"key": [("username",   ASCENDING)],  "unique": True,  "sparse": True,  "name": "idx_username"},
     ]
 
     for idx in indexes:

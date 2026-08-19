@@ -11,6 +11,7 @@ Feature-based structure:
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.config import validate_config
 from app.utils.logger import setup_logging, get_dobo_logger
 from app.database import DatabaseClient, initialize_database
 from app.http_client import HttpClient
@@ -26,6 +27,8 @@ logger = get_dobo_logger(__name__)
 async def lifespan(app: FastAPI):
     # Initialize logging FIRST (before anything else logs)
     setup_logging()
+    # Validate all required env vars
+    validate_config()
     logger.info("Application starting...")
     # Load NER model once at startup (not per-request)
     load_ner_model()
@@ -51,7 +54,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,3 +63,7 @@ app.add_middleware(
 app.include_router(voice_router,           prefix="/api/voice",           tags=["Voice"])
 app.include_router(onboarding_router,      prefix="/api/onboarding",      tags=["Onboarding Doctors"])
 app.include_router(specializations_router, prefix="/api/specializations", tags=["Specializations"])
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
