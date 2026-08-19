@@ -76,10 +76,8 @@ class ProxzarAuthService:
         logger.info("Requesting new Proxzar token")
         url = f"{PROXZAR_BASE_URL}{self.TOKEN_ENDPOINT}"
 
-        # OAuth2 password grant — application/x-www-form-urlencoded
-        # Include additional_claims for DRX to identify this as the DOBO integration identity
+        # Proxzar expects username + password + additional_claims as x-www-form-urlencoded
         form_data = {
-            "grant_type": "password",
             "username": PROXZAR_USERNAME,
             "password": PROXZAR_PASSWORD,
             "additional_claims": '{"role":"integration","platform":"dobo"}',
@@ -90,7 +88,6 @@ class ProxzarAuthService:
                 "POST",
                 url,
                 data=form_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
                 max_retries=2,
             )
         except httpx.ConnectError:
