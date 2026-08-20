@@ -49,7 +49,9 @@ app = FastAPI(
     title="DRX Doctor Registration API",
     version="3.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
+    docs_url="/dobodb/docs",
+    redoc_url="/dobodb/redoc",
+    openapi_url="/dobodb/openapi.json"
 )
 
 app.add_middleware(
@@ -60,9 +62,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(voice_router,           prefix="/api/voice",           tags=["Voice"])
-app.include_router(onboarding_router,      prefix="/api/onboarding",      tags=["Onboarding Doctors"])
-app.include_router(specializations_router, prefix="/api/specializations", tags=["Specializations"])
+app.include_router(voice_router,           prefix="/dobodb/api/voice",           tags=["Voice"])
+app.include_router(onboarding_router,      prefix="/dobodb/api/onboarding",      tags=["Onboarding Doctors"])
+app.include_router(specializations_router, prefix="/dobodb/api/specializations", tags=["Specializations"])
+
+# Root route
+@app.get("/dobodb", include_in_schema=False)
+async def root():
+    return {"This is root of DOBO db."}
+
 
 if __name__ == "__main__":
     import uvicorn

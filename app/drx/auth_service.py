@@ -17,7 +17,7 @@ import base64
 import httpx
 from typing import Optional
 from app.http_client import HttpClient
-from app.config import PROXZAR_BASE_URL, PROXZAR_USERNAME, PROXZAR_PASSWORD
+from app.config import PROXZAR_BASE_URL, PROXZAR_USERNAME, PROXZAR_PASSWORD, PROXZAR_TOKEN_ENDPOINT
 from app.utils.logger import get_dobo_logger
 
 logger = get_dobo_logger(__name__)
@@ -56,8 +56,6 @@ class ProxzarAuthService:
     _token: Optional[str] = None
     _token_expires_at: float = 0
 
-    TOKEN_ENDPOINT = "/api/v1/token"
-
     @classmethod
     def get_instance(cls) -> "ProxzarAuthService":
         if cls._instance is None:
@@ -74,7 +72,7 @@ class ProxzarAuthService:
             return self._token
 
         logger.info("Requesting new Proxzar token")
-        url = f"{PROXZAR_BASE_URL}{self.TOKEN_ENDPOINT}"
+        url = f"{PROXZAR_BASE_URL}{PROXZAR_TOKEN_ENDPOINT}"
 
         # Proxzar expects username + password + additional_claims as x-www-form-urlencoded
         form_data = {

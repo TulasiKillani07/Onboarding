@@ -28,12 +28,14 @@ SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
 # ---------------------------------------------------------------------------
 # DRX Integration
 # ---------------------------------------------------------------------------
-DRX_BASE_URL      = os.getenv("DRX_BASE_URL", "http://localhost:8003").rstrip("/")
+DRX_BASE_URL               = os.getenv("DRX_BASE_URL", "https://doctors-dr-x.onrender.com").rstrip("/")
+DRX_REGISTER_ENDPOINT      = os.getenv("DRX_REGISTER_ENDPOINT", "/drxdb/integration/doctors/register")
 
 # ---------------------------------------------------------------------------
 # Proxzar OAuth (identity provider for DRX communication)
 # ---------------------------------------------------------------------------
-PROXZAR_BASE_URL  = os.getenv("PROXZAR_BASE_URL", "https://oauth2.proxzar.ai").rstrip("/")
+PROXZAR_BASE_URL           = os.getenv("PROXZAR_BASE_URL", "https://oauth2.proxzar.ai").rstrip("/")
+PROXZAR_TOKEN_ENDPOINT     = os.getenv("PROXZAR_TOKEN_ENDPOINT", "/api/v1/token")
 PROXZAR_USERNAME  = os.getenv("PROXZAR_USERNAME", "")
 PROXZAR_PASSWORD  = os.getenv("PROXZAR_PASSWORD", "")
 

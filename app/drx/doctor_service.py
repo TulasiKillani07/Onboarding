@@ -11,7 +11,7 @@ from typing import Optional
 from app.http_client import HttpClient
 from app.drx.auth_service import ProxzarAuthService
 from app.drx.schemas import DRXDoctorCreatePayload, DRXLocationPayload
-from app.config import DRX_BASE_URL
+from app.config import DRX_BASE_URL, DRX_REGISTER_ENDPOINT
 from app.utils.logger import get_dobo_logger
 
 logger = get_dobo_logger(__name__)
@@ -19,8 +19,6 @@ logger = get_dobo_logger(__name__)
 
 class DRXDoctorService:
     """Registers doctors in DRX via integration API."""
-
-    REGISTER_ENDPOINT = "/drxdb/integration/doctors/register"
 
     @classmethod
     async def register(
@@ -69,7 +67,7 @@ class DRXDoctorService:
         )
 
         # Call DRX with retry
-        url = f"{DRX_BASE_URL}{cls.REGISTER_ENDPOINT}"
+        url = f"{DRX_BASE_URL}{DRX_REGISTER_ENDPOINT}"
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
