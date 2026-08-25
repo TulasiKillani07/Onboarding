@@ -5,7 +5,7 @@ Pydantic schemas for API validation and response serialization.
 """
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 import re
 from app.onboarding_doctors.models import Source, Status, SyncStatus
@@ -203,3 +203,28 @@ class RegisterDoctorResponse(BaseModel):
     }
 
 
+
+
+class DoctorListItem(BaseModel):
+    """Single doctor item in the list response."""
+    onboarding_id:  str
+    doctor_name:    str
+    username:       str
+    email:          Optional[str] = None
+    phone:          Optional[str] = None
+    hospital:       Optional[str] = None
+    specialization: Optional[str] = None
+    source:         Source
+    status:         Status
+    sync_status:    SyncStatus
+    sync_error:     Optional[str] = None
+    location:       Optional[LocationResponse] = None
+    created_at:     datetime
+
+
+class DoctorListResponse(BaseModel):
+    """Paginated list of onboarded doctors."""
+    total:   int                    = Field(description="Total number of doctors matching the filter")
+    page:    int                    = Field(description="Current page number")
+    limit:   int                    = Field(description="Number of items per page")
+    doctors: List[DoctorListItem]   = Field(description="List of doctors")
