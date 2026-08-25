@@ -17,7 +17,7 @@ import base64
 import httpx
 from typing import Optional
 from app.http_client import HttpClient
-from app.config import PROXZAR_BASE_URL, PROXZAR_USERNAME, PROXZAR_PASSWORD, PROXZAR_TOKEN_ENDPOINT
+from app.config import PROXZAR_BASE_URL, PROXZAR_USERNAME, PROXZAR_PASSWORD, PROXZAR_TOKEN_ENDPOINT, PROXZAR_ADDITIONAL_CLAIMS
 from app.utils.logger import get_dobo_logger
 
 logger = get_dobo_logger(__name__)
@@ -78,7 +78,7 @@ class ProxzarAuthService:
         form_data = {
             "username": PROXZAR_USERNAME,
             "password": PROXZAR_PASSWORD,
-            "additional_claims": '{"role":"integration","platform":"dobo"}',
+            "additional_claims": PROXZAR_ADDITIONAL_CLAIMS,
         }
 
         try:

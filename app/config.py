@@ -36,6 +36,9 @@ DRX_REGISTER_ENDPOINT      = os.getenv("DRX_REGISTER_ENDPOINT", "/drxdb/integrat
 # ---------------------------------------------------------------------------
 PROXZAR_BASE_URL           = os.getenv("PROXZAR_BASE_URL", "https://oauth2.proxzar.ai").rstrip("/")
 PROXZAR_TOKEN_ENDPOINT     = os.getenv("PROXZAR_TOKEN_ENDPOINT", "/api/v1/token")
+PROXZAR_USERNAME           = os.getenv("PROXZAR_USERNAME", "")
+PROXZAR_PASSWORD           = os.getenv("PROXZAR_PASSWORD", "")
+PROXZAR_ADDITIONAL_CLAIMS  = os.getenv("PROXZAR_ADDITIONAL_CLAIMS", '{"role":"integration","platform":"dobo"}')
 PROXZAR_USERNAME  = os.getenv("PROXZAR_USERNAME", "")
 PROXZAR_PASSWORD  = os.getenv("PROXZAR_PASSWORD", "")
 

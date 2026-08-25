@@ -170,6 +170,7 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
         source=Source(doc["source"]),
         status=doc["status"],
         sync_status=doc["sync_status"],
+        sync_error=doc.get("sync_error"),
         location=loc,
         created_at=doc["created_at"],
     )

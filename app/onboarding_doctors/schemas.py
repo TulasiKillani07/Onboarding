@@ -174,6 +174,7 @@ class RegisterDoctorResponse(BaseModel):
     source:         Source
     status:         Status
     sync_status:    SyncStatus
+    sync_error:     Optional[str]          = Field(default=None, description="Error message if sync to DRX failed")
     location:       Optional[LocationResponse] = None
     created_at:     datetime
 
@@ -190,6 +191,7 @@ class RegisterDoctorResponse(BaseModel):
                 "source":         "VOICE",
                 "status":         "ACTIVE",
                 "sync_status":    "SYNCED",
+                "sync_error":     None,
                 "location": {
                     "city":    "Hyderabad",
                     "state":   "Telangana",
