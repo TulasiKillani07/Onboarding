@@ -13,6 +13,9 @@ No business logic. Pure persistence.
 from app.database import get_database, COLLECTION_ONBOARDING_SESSIONS
 from app.onboarding_sessions.models import generate_session_id, new_session_document
 from typing import Optional
+from app.utils.logger import get_dobo_logger
+
+logger = get_dobo_logger(__name__)
 
 
 def _safe_str(value: str) -> str:
@@ -56,6 +59,7 @@ async def create_session(
     )
 
     await col.insert_one(doc)
+    logger.info(f"Session created | session_id={session_id} onboarding_id={onboarding_id}")
     return doc
 
 
