@@ -148,7 +148,7 @@ def get_dobo_logger(
         )
 
     # Log file path
-    log_file = log_dir / "app.log"
+    log_file = log_dir / "dobo.log"
 
     # Create formatter
     fmt_string = (
@@ -199,4 +199,4 @@ if __name__ == "__main__":
     logger.warning("Test warning")
     logger.error("Test error")
 
-    print(f"[SUCCESS] Check log file: {log_dir / 'app.log'}")
+    print(f"[SUCCESS] Check log file: {log_dir / 'dobo.log'}")

@@ -9,10 +9,12 @@ Feature-based structure:
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from typing import Optional
+from fastapi import FastAPI, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, PlainTextResponse
 from app.config import validate_config
-from app.utils.logger import setup_logging, get_dobo_logger
+from app.utils.logger import setup_logging, get_dobo_logger, get_log_directory
 from app.database import DatabaseClient, initialize_database
 from app.http_client import HttpClient
 from app.voice import router as voice_router
@@ -62,6 +64,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch ALL unhandled exceptions and log them to dobo.log."""
+    logger.error(
+        f"Unhandled exception | method={request.method} path={request.url.path} "
+        f"error={type(exc).__name__}: {str(exc)}",
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
 app.include_router(voice_router,           prefix="/dobodb/api/voice",           tags=["Voice"])
 app.include_router(onboarding_router,      prefix="/dobodb/api/onboarding",      tags=["Onboarding Doctors"])
 app.include_router(specializations_router, prefix="/dobodb/api/specializations", tags=["Specializations"])
@@ -70,6 +86,39 @@ app.include_router(specializations_router, prefix="/dobodb/api/specializations",
 @app.get("/dobodb", include_in_schema=False)
 async def root():
     return {"This is root of DOBO db."}
+
+
+@app.get(
+    "/dobodb/logs",
+    tags=["Logs"],
+    summary="View application logs",
+    description="Returns the dobo.log file contents. Use query params to filter.",
+)
+async def get_logs(
+    lines: int = Query(default=100, ge=1, le=5000, description="Number of lines from the end"),
+    level: Optional[str] = Query(default=None, description="Filter by level: ERROR, WARNING, INFO, DEBUG"),
+):
+    """Read dobo.log and return last N lines."""
+    log_file = get_log_directory() / "dobo.log"
+
+    if not log_file.exists():
+        return PlainTextResponse("Log file not found. No logs written yet.", status_code=200)
+
+    try:
+        with open(log_file, "r", encoding="utf-8") as f:
+            all_lines = f.readlines()
+    except Exception as e:
+        return PlainTextResponse(f"Failed to read log file: {str(e)}", status_code=500)
+
+    # Filter by level if specified
+    if level:
+        level_upper = level.upper()
+        all_lines = [line for line in all_lines if f"[{level_upper}]" in line]
+
+    # Return last N lines
+    tail_lines = all_lines[-lines:]
+
+    return PlainTextResponse("".join(tail_lines), status_code=200)
 
 
 if __name__ == "__main__":

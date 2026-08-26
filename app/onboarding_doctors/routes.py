@@ -5,11 +5,16 @@ Thin router — no business logic here.
 """
 
 from fastapi import APIRouter, HTTPException, Query, status
+from datetime import datetime
+from typing import Optional
 from app.onboarding_doctors.schemas import RegisterDoctorRequest, RegisterDoctorResponse, DoctorListResponse, DoctorListItem, LocationResponse
 from app.onboarding_doctors.service import register_doctor
 from app.onboarding_doctors.models import Source, SyncStatus
 from app.drx.sync_service import DRXSyncService
 from app.database import get_database, COLLECTION_DOCTORS
+from app.utils.logger import get_dobo_logger
+
+logger = get_dobo_logger(__name__)
 
 router = APIRouter()
 
@@ -36,7 +41,16 @@ doctor is still saved with sync_status=FAILED. Use retry endpoints to re-sync.
     },
 )
 async def register(request: RegisterDoctorRequest) -> RegisterDoctorResponse:
-    return await register_doctor(request)
+    logger.info(f"POST /register | doctor_name={request.doctor_name} source={request.source.value}")
+    try:
+        result = await register_doctor(request)
+        logger.info(f"POST /register success | onboarding_id={result.onboarding_id} sync_status={result.sync_status}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"POST /register failed | error={str(e)}", exc_info=True)
+        raise
 
 
 @router.post(
@@ -55,6 +69,7 @@ Idempotent — if doctor already exists in DRX, it returns success.
     },
 )
 async def retry_sync(onboarding_id: str):
+    logger.info(f"POST /retry-sync | onboarding_id={onboarding_id}")
     # Validate ObjectId format (24 hex chars)
     if not onboarding_id or len(onboarding_id) != 24:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid onboarding_id format")
@@ -66,6 +81,8 @@ async def retry_sync(onboarding_id: str):
     success, error = await DRXSyncService.sync(onboarding_id)
     if error and "not found" in error.lower():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error)
+
+    logger.info(f"POST /retry-sync complete | onboarding_id={onboarding_id} success={success}")
     return {
         "onboarding_id": onboarding_id,
         "sync_status": "SYNCED" if success else "FAILED",
@@ -89,7 +106,9 @@ Only retries doctors whose backoff period has elapsed.
     },
 )
 async def retry_sync_all():
+    logger.info("POST /retry-sync-all started")
     result = await DRXSyncService.retry_failed()
+    logger.info(f"POST /retry-sync-all complete | {result}")
     return result
 
 
@@ -115,53 +134,63 @@ Get a paginated list of all doctors in the onboarding database.
 async def list_doctors(
     page: int = Query(default=1, ge=1, description="Page number"),
     limit: int = Query(default=20, ge=1, le=100, description="Items per page"),
-    sync_status: str | None = Query(default=None, description="Filter by sync status: PENDING, SYNCED, FAILED"),
-    source: str | None = Query(default=None, description="Filter by source: VOICE, MANUAL"),
+    sync_status: Optional[str] = Query(default=None, description="Filter by sync status: PENDING, SYNCED, FAILED"),
+    source: Optional[str] = Query(default=None, description="Filter by source: VOICE, MANUAL"),
 ):
-    db = get_database()
-    col = db[COLLECTION_DOCTORS]
+    logger.info(f"GET /doctors | page={page} limit={limit} sync_status={sync_status} source={source}")
+    try:
+        db = get_database()
+        col = db[COLLECTION_DOCTORS]
 
-    # Build filter
-    query = {}
-    if sync_status:
-        query["sync_status"] = sync_status.upper()
-    if source:
-        query["source"] = source.upper()
+        # Build filter
+        query = {}
+        if sync_status:
+            query["sync_status"] = sync_status.upper()
+        if source:
+            query["source"] = source.upper()
 
-    # Get total count
-    total = await col.count_documents(query)
+        # Get total count
+        total = await col.count_documents(query)
 
-    # Fetch paginated results (sorted by created_at descending)
-    skip = (page - 1) * limit
-    cursor = col.find(query).sort("created_at", -1).skip(skip).limit(limit)
-    docs = await cursor.to_list(length=limit)
+        # Fetch paginated results (sorted by created_at descending)
+        skip = (page - 1) * limit
+        cursor = col.find(query).sort("created_at", -1).skip(skip).limit(limit)
+        docs = await cursor.to_list(length=limit)
 
-    # Build response
-    doctors = []
-    for doc in docs:
-        loc = None
-        if doc.get("location"):
-            loc = LocationResponse(**doc["location"])
+        # Build response
+        doctors = []
+        for doc in docs:
+            try:
+                loc = None
+                if doc.get("location"):
+                    loc = LocationResponse(**doc["location"])
 
-        doctors.append(DoctorListItem(
-            onboarding_id=str(doc["_id"]),
-            doctor_name=doc["doctor_name"],
-            username=doc["username"],
-            email=doc.get("email"),
-            phone=doc.get("phone"),
-            hospital=doc.get("hospital"),
-            specialization=doc.get("specialization"),
-            source=Source(doc["source"]),
-            status=doc["status"],
-            sync_status=doc["sync_status"],
-            sync_error=doc.get("sync_error"),
-            location=loc,
-            created_at=doc["created_at"],
-        ))
+                doctors.append(DoctorListItem(
+                    onboarding_id=str(doc["_id"]),
+                    doctor_name=doc.get("doctor_name", ""),
+                    username=doc.get("username", ""),
+                    email=doc.get("email"),
+                    phone=doc.get("phone"),
+                    hospital=doc.get("hospital"),
+                    specialization=doc.get("specialization"),
+                    source=doc.get("source", "MANUAL"),
+                    status=doc.get("status", "ACTIVE"),
+                    sync_status=doc.get("sync_status", "PENDING"),
+                    sync_error=doc.get("sync_error"),
+                    location=loc,
+                    created_at=doc.get("created_at", doc.get("updated_at", datetime.now())),
+                ))
+            except Exception as e:
+                logger.warning(f"Skipping malformed doc | _id={doc.get('_id')} error={str(e)}")
+                continue
 
-    return DoctorListResponse(
-        total=total,
-        page=page,
-        limit=limit,
-        doctors=doctors,
-    )
+        logger.info(f"GET /doctors success | total={total} returned={len(doctors)}")
+        return DoctorListResponse(
+            total=total,
+            page=page,
+            limit=limit,
+            doctors=doctors,
+        )
+    except Exception as e:
+        logger.error(f"GET /doctors failed | error={str(e)}", exc_info=True)
+        raise
