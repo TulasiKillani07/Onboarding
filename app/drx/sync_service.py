@@ -46,17 +46,27 @@ class DRXSyncService:
             return False, f"Doctor not found: {onboarding_id}"
 
         # 2. Call DRX
-        location = doc.get("location")
+        # Support both new (locations[]) and old (single location + hospital) shapes.
+        locations = doc.get("locations")
+        if not locations:
+            legacy_loc = doc.get("location") or {}
+            if doc.get("hospital") or legacy_loc:
+                locations = [{
+                    "location_priority": "PRIMARY",
+                    "facility_type":     "HOSPITAL",
+                    "location_name":     doc.get("hospital"),
+                    **legacy_loc,
+                }]
+
         success, error = await DRXDoctorService.register(
             doctor_name=doc["doctor_name"],
             email=doc.get("email"),
             phone=doc.get("phone"),
             password=doc.get("password"),
             username=doc.get("username"),
-            hospital=doc.get("hospital"),
             specialization=doc.get("specialization"),
             source=doc.get("source", "VOICE"),
-            location=location,
+            locations=locations,
         )
 
         # 3. Update sync_status + tracking fields

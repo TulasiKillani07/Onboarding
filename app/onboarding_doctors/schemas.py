@@ -8,7 +8,10 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 import re
-from app.onboarding_doctors.models import Source, Status, SyncStatus
+from app.onboarding_doctors.models import (
+    Source, Status, SyncStatus,
+    LocationPriority, FacilityType, LocationSource,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -16,34 +19,58 @@ from app.onboarding_doctors.models import Source, Status, SyncStatus
 # ---------------------------------------------------------------------------
 
 class LocationRequest(BaseModel):
-    latitude:  Optional[str] = Field(default=None, description="GPS latitude")
-    longitude: Optional[str] = Field(default=None, description="GPS longitude")
-    address:   Optional[str] = Field(default=None, description="Full address string")
-    city:      Optional[str] = Field(default=None, description="City")
-    state:     Optional[str] = Field(default=None, description="State or province")
-    country:   Optional[str] = Field(default=None, description="Country")
+    location_priority:   LocationPriority = Field(description="REQUIRED. Allowed: PRIMARY, SECONDARY, OTHER. Exactly one PRIMARY required; at most one SECONDARY.")
+    facility_type:       FacilityType     = Field(description="REQUIRED. Allowed: HOSPITAL, CLINIC, POLYCLINIC, MEDICAL_CENTER, 'INSTITUTION OR MEDICAL COLLEGE', OTHER.")
+    facility_type_other: Optional[str]    = Field(default=None, description="Optional. Free text — required only when facility_type is OTHER.")
+    location_name:       str              = Field(description="REQUIRED. Institution name (hospital / clinic / college / etc.).")
+    latitude:            Optional[str]    = Field(default=None, description="Optional. GPS latitude as a string, e.g. '17.385044'.")
+    longitude:           Optional[str]    = Field(default=None, description="Optional. GPS longitude as a string, e.g. '78.486671'.")
+    address:             Optional[str]    = Field(default=None, description="Optional. Full address string.")
+    area:                Optional[str]    = Field(default=None, description="Optional. Locality / area within the city.")
+    city:                str              = Field(description="REQUIRED. City.")
+    district:            str              = Field(description="REQUIRED. District.")
+    state:               str              = Field(description="REQUIRED. State or province.")
+    country:             str              = Field(description="REQUIRED. Country.")
+    postcode:            str              = Field(description="REQUIRED. Postal / ZIP code.")
+    location_source:     Optional[LocationSource] = Field(default=None, description="Optional. Allowed: CURRENT_LOCATION, MAP_SEARCH, MANUAL.")
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "latitude":  "17.385044",
-                "longitude": "78.486671",
-                "address":   "Apollo Hospital, Jubilee Hills, Hyderabad",
-                "city":      "Hyderabad",
-                "state":     "Telangana",
-                "country":   "India",
+                "location_priority": "PRIMARY",
+                "facility_type":     "HOSPITAL",
+                "location_name":     "Apollo Hospital",
+                "latitude":          "17.385044",
+                "longitude":         "78.486671",
+                "address":           "Apollo Hospital, Jubilee Hills, Hyderabad",
+                "area":              "Jubilee Hills",
+                "city":              "Hyderabad",
+                "district":          "Hyderabad",
+                "state":             "Telangana",
+                "country":           "India",
+                "postcode":          "500033",
+                "location_source":   "MAP_SEARCH",
             }
         }
     }
 
 
 class LocationResponse(BaseModel):
-    latitude:  Optional[str] = None
-    longitude: Optional[str] = None
-    address:   Optional[str] = None
-    city:      Optional[str] = None
-    state:     Optional[str] = None
-    country:   Optional[str] = None
+    location_priority:   Optional[str] = None
+    facility_type:       Optional[str] = None
+    facility_type_other: Optional[str] = None
+    location_name:       Optional[str] = None
+    latitude:            Optional[str] = None
+    longitude:           Optional[str] = None
+    address:             Optional[str] = None
+    area:                Optional[str] = None
+    city:                Optional[str] = None
+    district:            Optional[str] = None
+    state:               Optional[str] = None
+    country:             Optional[str] = None
+    postcode:            Optional[str] = None
+    location_source:     Optional[str] = None
+    status:              Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -79,10 +106,9 @@ class RegisterDoctorRequest(BaseModel):
         return v
     email:          str           = Field(description="Email address")
     phone:          str           = Field(description="Phone number (exactly 10 digits)")
-    hospital:       str           = Field(description="Hospital or clinic name")
-    specialization: str           = Field(description="Medical specialization")
+    specialization: str           = Field(description="Medical specialization. Accepts a value from GET /dobodb/api/specializations OR any manual/custom free-text value the frontend sends.")
     source:         Source        = Field(description="VOICE or MANUAL")
-    location:       LocationRequest = Field(description="Doctor's location")
+    locations:      List[LocationRequest] = Field(description="Doctor's practice locations (exactly one PRIMARY required)", min_length=1)
 
     # --- Voice session data (optional, sent by frontend for VOICE registrations) ---
     transcript:      Optional[str]  = Field(default=None, description="Raw transcript from STT")
@@ -108,6 +134,18 @@ class RegisterDoctorRequest(BaseModel):
             raise ValueError("Phone number must be exactly 10 digits (with optional +91 prefix)")
         return f"+91{digits}"
 
+    @field_validator("locations")
+    @classmethod
+    def validate_locations(cls, v):
+        primary   = sum(1 for loc in v if loc.location_priority == LocationPriority.PRIMARY)
+        secondary = sum(1 for loc in v if loc.location_priority == LocationPriority.SECONDARY)
+        if primary != 1:
+            raise ValueError(f"Exactly one PRIMARY location is required (found {primary})")
+        if secondary > 1:
+            raise ValueError(f"At most one SECONDARY location is allowed (found {secondary})")
+        return v
+
+
     model_config = {
         "json_schema_extra": {
             "example": {
@@ -116,17 +154,25 @@ class RegisterDoctorRequest(BaseModel):
                 "password":       "Rahul@123",
                 "email":          "rahul@gmail.com",
                 "phone":          "+919876543210",
-                "hospital":       "Apollo Hospital",
                 "specialization": "Cardiology",
                 "source":         "VOICE",
-                "location": {
-                    "latitude":  "17.385044",
-                    "longitude": "78.486671",
-                    "address":   "Apollo Hospital, Jubilee Hills, Hyderabad",
-                    "city":      "Hyderabad",
-                    "state":     "Telangana",
-                    "country":   "India",
-                },
+                "locations": [
+                    {
+                        "location_priority": "PRIMARY",
+                        "facility_type":     "HOSPITAL",
+                        "location_name":     "Apollo Hospital",
+                        "latitude":          "17.385044",
+                        "longitude":         "78.486671",
+                        "address":           "Apollo Hospital, Jubilee Hills, Hyderabad",
+                        "area":              "Jubilee Hills",
+                        "city":              "Hyderabad",
+                        "district":          "Hyderabad",
+                        "state":             "Telangana",
+                        "country":           "India",
+                        "postcode":          "500033",
+                        "location_source":   "MAP_SEARCH",
+                    }
+                ],
                 "transcript": "I am Dr Rahul Sharma from Apollo Hospital Cardiology department",
                 "ner_output": {
                     "DOCTOR_NAME": ["Dr Rahul Sharma"],
@@ -161,21 +207,19 @@ class RegisterDoctorRequest(BaseModel):
 class RegisterDoctorResponse(BaseModel):
     """
     Returned after successful doctor registration.
-    onboarding_id is MongoDB's _id as a string â€” identifies this onboarding record.
-    drx_doctor_gid is null until DRX sync completes.
+    onboarding_id is MongoDB's _id as a string — identifies this onboarding record.
     """
     onboarding_id:  str                    = Field(description="MongoDB ObjectId of this onboarding record")
     doctor_name:    str
     username:       str
     email:          Optional[str]          = None
     phone:          Optional[str]          = None
-    hospital:       Optional[str]          = None
     specialization: Optional[str]          = None
     source:         Source
     status:         Status
     sync_status:    SyncStatus
     sync_error:     Optional[str]          = Field(default=None, description="Error message if sync to DRX failed")
-    location:       Optional[LocationResponse] = None
+    locations:      List[LocationResponse] = Field(default_factory=list)
     created_at:     datetime
 
     model_config = {
@@ -186,23 +230,29 @@ class RegisterDoctorResponse(BaseModel):
                 "username":       "rahul_sharma",
                 "email":          "rahul@gmail.com",
                 "phone":          "+919876543210",
-                "hospital":       "Apollo Hospital",
                 "specialization": "Cardiology",
                 "source":         "VOICE",
                 "status":         "ACTIVE",
                 "sync_status":    "SYNCED",
                 "sync_error":     None,
-                "location": {
-                    "city":    "Hyderabad",
-                    "state":   "Telangana",
-                    "country": "India",
-                },
+                "locations": [
+                    {
+                        "location_priority": "PRIMARY",
+                        "facility_type":     "HOSPITAL",
+                        "location_name":     "Apollo Hospital",
+                        "area":              "Jubilee Hills",
+                        "city":              "Hyderabad",
+                        "district":          "Hyderabad",
+                        "state":             "Telangana",
+                        "country":           "India",
+                        "postcode":          "500033",
+                        "status":            "ACTIVE",
+                    }
+                ],
                 "created_at": "2026-08-05T10:30:00Z",
             }
         }
     }
-
-
 
 
 class DoctorListItem(BaseModel):
@@ -212,13 +262,12 @@ class DoctorListItem(BaseModel):
     username:       str
     email:          Optional[str] = None
     phone:          Optional[str] = None
-    hospital:       Optional[str] = None
     specialization: Optional[str] = None
     source:         Source
     status:         Status
     sync_status:    SyncStatus
     sync_error:     Optional[str] = None
-    location:       Optional[LocationResponse] = None
+    locations:      List[LocationResponse] = Field(default_factory=list)
     created_at:     datetime
 
 

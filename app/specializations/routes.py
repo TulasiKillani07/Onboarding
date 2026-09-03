@@ -27,24 +27,27 @@ _CACHED_RESPONSE = SpecializationListResponse(
 @router.get(
     "",
     response_model=SpecializationListResponse,
-    summary="Get all specializations",
+    summary="Get the specialization master list",
     description="""
-Returns the complete canonical specialization list for the registration form dropdown.
+Returns the complete canonical list of medical specializations for the registration
+form dropdown. The response is computed once and cached — repeated calls are free.
 
-**Use `ordered`** — it puts the 10 most common specializations first, then the rest alphabetically.
-This gives the best UX for the dropdown.
+### Response fields
+| Field | Purpose |
+|-------|---------|
+| `top` | The most common specializations (show these first) |
+| `all` | Complete canonical list |
+| `ordered` | `top` first, then the rest alphabetically — **use this for the dropdown** |
+| `total` | Count of all specializations |
 
-**Top 10 (shown first):**
-General Physician, Cardiology, Dermatology, Pediatrics, Orthopedic Surgery,
-Obstetrics & Gynecology, Neurology, Psychiatry, Ophthalmology, ENT
-
-**Total:** 58 canonical specializations covering all major medical fields.
-
-**Frontend usage:**
+### Frontend usage
 ```js
-const { ordered } = await fetch('/api/specializations').then(r => r.json())
-// Use `ordered` to populate the <select> dropdown
+const { ordered } = await fetch('/dobodb/api/specializations').then(r => r.json())
+// populate the <select> dropdown with `ordered`
 ```
+
+**Tip:** Prefer `ordered` for the best UX — common picks surface at the top,
+everything else stays easy to find alphabetically.
 """,
     responses={
         200: {"description": "Specialization list returned successfully"},

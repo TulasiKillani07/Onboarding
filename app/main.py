@@ -91,8 +91,33 @@ async def root():
 @app.get(
     "/dobodb/logs",
     tags=["Logs"],
-    summary="View application logs",
-    description="Returns the dobo.log file contents. Use query params to filter.",
+    summary="View application logs (production log viewer)",
+    description="""
+Returns the contents of the `dobo.log` file as **plain text** so you can inspect what is
+happening in production without shell access to the server.
+
+### Query parameters
+| Param | Default | Range | Purpose |
+|-------|---------|-------|---------|
+| `lines` | 100 | 1–5000 | Number of lines to return from the **end** of the log (most recent) |
+| `level` | — | `ERROR` / `WARNING` / `INFO` / `DEBUG` | Return only lines at this level |
+
+### Examples
+- `/dobodb/logs` → last 100 log lines
+- `/dobodb/logs?lines=500` → last 500 lines
+- `/dobodb/logs?level=ERROR` → only error lines
+- `/dobodb/logs?lines=200&level=WARNING` → last 200 warning lines
+
+### Notes
+- Every unhandled exception in the app is captured to this log via a global handler,
+  so nothing silently disappears.
+- Returns a friendly message (200) if the log file does not exist yet.
+- Response content type is `text/plain`.
+""",
+    responses={
+        200: {"description": "Log contents as plain text (or a message if no log exists yet)"},
+        500: {"description": "Failed to read the log file"},
+    },
 )
 async def get_logs(
     lines: int = Query(default=100, ge=1, le=5000, description="Number of lines from the end"),

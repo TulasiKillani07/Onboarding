@@ -28,10 +28,9 @@ class DRXDoctorService:
         phone:          Optional[str] = None,
         password:       Optional[str] = None,
         username:       Optional[str] = None,
-        hospital:       Optional[str] = None,
         specialization: Optional[str] = None,
         source:         str = "VOICE",
-        location:       Optional[dict] = None,
+        locations:      Optional[list] = None,
     ) -> tuple[bool, Optional[str]]:
         """
         Register a doctor in DRX.
@@ -50,9 +49,9 @@ class DRXDoctorService:
             return False, f"Proxzar auth failed: {str(e)}"
 
         # Build payload
-        loc_payload = None
-        if location:
-            loc_payload = DRXLocationPayload(**location)
+        loc_payloads = None
+        if locations:
+            loc_payloads = [DRXLocationPayload(**loc) for loc in locations]
 
         payload = DRXDoctorCreatePayload(
             name=doctor_name,
@@ -60,10 +59,9 @@ class DRXDoctorService:
             email=email,
             phone=phone,
             password=password,
-            hospital=hospital,
             specialization=specialization,
             source=source,
-            location=loc_payload,
+            locations=loc_payloads,
         )
 
         # Call DRX with retry

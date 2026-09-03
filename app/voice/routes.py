@@ -68,20 +68,26 @@ def _build_response(resolved: dict, transcript: str,
 @router.post(
     "/transcribe",
     response_model=TranscriptionResponse,
-    summary="Transcribe audio to text",
+    summary="Transcribe audio to text (STT only)",
     description="""
-Upload an audio file and get the transcript back.
+Upload an audio file and get the raw transcript back. **No entity extraction** is performed.
 
-**Supported formats:** WAV, MP3, WebM, OGG, M4A
+### Input
+- `file` — multipart audio upload. Supported: **WAV, MP3, WebM, OGG, M4A**. Keep under ~30s.
 
-**Use this when:** The frontend records audio and wants the raw transcript before extraction.
+### Pipeline
+`Audio → Sarvam AI Saaras v3 STT → Transcript`
 
-**Pipeline:** Audio -> Sarvam AI Saaras v3 STT -> Transcript
+### When to use
+Use this when the frontend just needs the spoken text (e.g. to display it), and will call
+`/extract` separately. For the full one-shot flow, use `/process` instead.
 
-**Note:** This endpoint does NOT extract entities. Use `/process` for the full pipeline.
+### Response
+Returns `success`, the `transcript`, detected `language`, and audio `duration`.
+If no speech is detected, `success=false` with an empty transcript.
 """,
     responses={
-        200: {"description": "Transcription successful"},
+        200: {"description": "Transcription completed (check `success` flag)"},
         400: {"description": "Empty file or unsupported audio format"},
         500: {"description": "Sarvam STT API error"},
     },
@@ -114,27 +120,34 @@ async def transcribe_audio(
 @router.post(
     "/extract",
     response_model=ExtractionResponse,
-    summary="Extract doctor data from transcript",
+    summary="Extract doctor fields from a transcript (NER only)",
     description="""
-Extract structured doctor registration data from a plain text transcript.
+Extract structured doctor registration fields from a plain-text transcript.
 
-**Use this when:** You already have the transcript (typed input or pre-transcribed).
+### Input
+JSON body with a single `transcript` string (typed text or pre-transcribed speech).
 
-**Pipeline:** Transcript -> Regex -> NER -> Validate -> Pattern Extract -> Normalize -> Resolve
+### Pipeline
+`Transcript → Regex → NER → Validate → Pattern Extract → Normalize → Resolve`
 
-**Returns:** Exactly one value per field (or empty string if not found).
+### Fields returned (exactly one value each, empty string if not found)
+| Field | Description |
+|-------|-------------|
+| `name` | Doctor's full name, title stripped (Dr., Prof. removed) |
+| `hospital` | Institution / hospital / clinic name |
+| `department` | Medical specialization |
+| `phone` | Phone number |
+| `email` | Email address |
 
-**Fields extracted:**
-- `name` - Doctor's full name without title (Dr., Prof. are stripped)
-- `hospital` - Hospital or clinic name
-- `department` - Medical specialization
-- `phone` - Phone number
-- `email` - Email address
+### Confidence
+`confidence` is `0.0–1.0`, computed as the fraction of the 5 fields successfully filled.
 
-**Confidence:** 0.0-1.0 based on how many of the 5 fields were successfully extracted.
+### When to use
+Use this when you already have the transcript. To go straight from audio to fields,
+use `/process`.
 """,
     responses={
-        200: {"description": "Extraction successful"},
+        200: {"description": "Extraction completed"},
         400: {"description": "Empty transcript"},
         500: {"description": "Internal extraction error"},
     },
@@ -160,24 +173,28 @@ async def extract_entities(
 @router.post(
     "/process",
     response_model=ExtractionResponse,
-    summary="Full pipeline: Audio -> Extracted doctor data",
+    summary="Full pipeline: audio → extracted doctor fields (primary endpoint)",
     description="""
-Upload audio and get fully extracted, normalized doctor registration data in one call.
+Upload a voice recording and get fully extracted, normalized doctor registration fields
+in a **single call**. This is the primary endpoint the registration form should use.
 
-**Use this for the registration form.** This is the primary endpoint for the frontend.
+### Input
+- `file` — multipart audio upload. Supported: **WAV, MP3, WebM, OGG, M4A**. Keep under ~30s.
+- Ask the doctor to say: name, hospital/institution, specialization, phone, and email.
 
-**Pipeline:**
-1. Audio -> Sarvam AI STT -> Transcript
-2. Transcript -> Regex (phone, email)
-3. Transcript -> Custom spaCy NER (name, hospital, specialization)
-4. Validate -> reject garbage entities
-5. Pattern Extract -> catch informal terms
-6. Normalize -> strip titles, fix hospital typos, map specialization aliases
-7. Resolve -> collapse to exactly one value per field
+### Pipeline
+1. `Audio → Sarvam AI STT → Transcript`
+2. Regex extraction (phone, email)
+3. Custom spaCy NER (name, hospital, specialization)
+4. Validate — reject garbage entities
+5. Pattern extract — catch informal terms
+6. Normalize — strip titles, fix hospital typos, map specialization aliases
+7. Resolve — collapse to exactly one value per field
 
-**On missing fields:** Returns empty string - never null for form fields.
-
-**Supported audio:** WAV, MP3, WebM, OGG, M4A (max 30 seconds recommended).
+### Output
+Same shape as `/extract`: `data` with one value per field, plus `transcript`, raw
+`entities`, `confidence`, and `pipeline_steps` for debugging. Missing fields come back
+as empty strings — **never null** — so the form can bind safely.
 """,
     responses={
         200: {"description": "Full pipeline succeeded"},

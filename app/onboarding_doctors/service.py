@@ -81,17 +81,16 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
 
     # 2. Save doctor
     password_hash = sha256(request.password.encode()).hexdigest()
-    location_dict = request.location.model_dump() if request.location else None
+    locations_list = [loc.model_dump(mode="json") for loc in request.locations]
     doc = new_doctor_document(
         doctor_name=request.doctor_name,
         username=request.username,
         password_hash=password_hash,
         email=request.email,
         phone=request.phone,
-        hospital=request.hospital,
         specialization=request.specialization,
         source=request.source,
-        location=location_dict,
+        locations=locations_list,
     )
     # Store plain password temporarily for DRX sync (removed after successful sync)
     doc["password"] = request.password
@@ -123,12 +122,10 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
         "doctor_name":    request.doctor_name,
         "email":          request.email,
         "phone":          request.phone,
-        "hospital":       request.hospital,
         "specialization": request.specialization,
         "source":         request.source.value,
+        "locations":      locations_list,
     }
-    if location_dict:
-        final_submission["location"] = location_dict
 
     await create_session(
         onboarding_id=onboarding_id,
@@ -150,9 +147,7 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
     doc = await col.find_one({"_id": ObjectId(onboarding_id)})
 
     # Build response
-    loc = None
-    if doc.get("location"):
-        loc = LocationResponse(**doc["location"])
+    locations_resp = [LocationResponse(**loc) for loc in doc.get("locations", [])]
 
     logger.info(
         f"Registration complete | onboarding_id={onboarding_id} "
@@ -165,12 +160,11 @@ async def register_doctor(request: RegisterDoctorRequest) -> RegisterDoctorRespo
         username=doc["username"],
         email=doc.get("email"),
         phone=doc.get("phone"),
-        hospital=doc.get("hospital"),
         specialization=doc.get("specialization"),
         source=Source(doc["source"]),
         status=doc["status"],
         sync_status=doc["sync_status"],
         sync_error=doc.get("sync_error"),
-        location=loc,
+        locations=locations_resp,
         created_at=doc["created_at"],
     )
